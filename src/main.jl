@@ -1,10 +1,10 @@
 
-function  main(;d::Int64 = 128,K::Int64 = 256,S::Int64 = 20,b::Int64 = 0,snr::Float64 = 0.0,rho::Float64 = 0.,eps::Float64 = 1.,N::Int64 = 2000,iter::Int64 = 100)
+function run_tests(;d::Int64 = 128,K::Int64 = 256,S::Int64 = 20,b::Int64 = 0,snr::Float64 = 0.0,rho::Float64 = 0.,eps::Float64 = 1.,N::Int64 = 2000,iter::Int64 = 100)
     weights = ones(K,1)#0.3:1.2/(K-1):1.5; # weights for non-uniform sampling without replacement
     #p = randperm(K)
     ##weights = (1:K).^(-0.8)
     #weights = reverse(weights, dist = 2)
-    w = weights/sum(weights)*S
+    w = aweights(weights/sum(weights)*S)
 
     #### algorithm parameters #################################
     runs = 1;         # number of trials
@@ -27,7 +27,7 @@ function  main(;d::Int64 = 128,K::Int64 = 256,S::Int64 = 20,b::Int64 = 0,snr::Fl
     end
 
     normalise!(dico) 
-   dico
+    dico
     x1toS=sqrt(1/S).*(1-b).^(1:S)
     x1toS = x1toS./norm(x1toS)
     ip = zeros(K,N)

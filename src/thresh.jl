@@ -4,7 +4,7 @@ function tresh(Y,Dict,S)
     d,N = size(Y);
 
     for i = 1:N
-        ip = @view Y[:,i]'*Dict;
-    
+        ip = Y[:,i]'*Dict;
+    end
     
 end

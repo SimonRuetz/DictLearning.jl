@@ -1,6 +1,6 @@
 module DictLearning
 
-export mod, ksvd, itkrm, main
+export mod, ksvd, itkrm, run_tests
 
 using LinearAlgebra
 using Plots
