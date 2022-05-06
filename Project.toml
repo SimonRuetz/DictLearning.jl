@@ -3,6 +3,9 @@ uuid = "b42b54c9-4caf-49f4-9a44-d8f87df0274a"
 authors = ["Simon Ruetz"]
 version = "0.1.0"
 
+[deps]
+Revise = "295af30f-e4ad-537b-8983-00126c2a3abe"
+
 [compat]
 julia = "1.8"
 

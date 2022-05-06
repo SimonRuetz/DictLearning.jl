@@ -1,15 +1,15 @@
 module DictLearning
 
-export mod, ksvd, itkrm, run_tests
+export mod, ksvd, itkrm, run_tests, f
 
-using LinearAlgebra
-using Plots
-using LinearAlgebra
-using Random
-using BenchmarkTools
-using Base.Threads
-using Base.Sort
-using StatsBase
+#using LinearAlgebra
+#using Plots
+#using LinearAlgebra
+#using Random
+#using BenchmarkTools
+#using Base.Threads
+#using Base.Sort
+#using StatsBase
 
 # Write your package code here.
 include("utils.jl")
