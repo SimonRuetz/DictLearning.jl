@@ -1,6 +1,7 @@
 
 function itkrm(Y,S,K,dico,iter)
     ### Allocations for more speed
+    d,N = size(Y)
     ip = zeros(K,N)
     absip = zeros(K,N)
     signip = zeros(K,N)
@@ -11,7 +12,6 @@ function itkrm(Y,S,K,dico,iter)
 
     for i = 1:iter
         #### algorithm
-        d,N = size(Y)
         mul!(ip,dico',Y)
         
         absip .= abs.(ip)
@@ -25,12 +25,12 @@ function itkrm(Y,S,K,dico,iter)
         end 
         
         ### dictionary update step
-        mul!(data2,dico,X)
-        broadcast!(+, data, data, data2)
+        mul!(Y,dico,X)
+        broadcast!(+, Y, Y, Y)
         mul!(dico,dico,Diagonal(vec(sum(abs.(X),dims=2))))
         broadcast!(sign, X, X)#X .= sign.(X)
-        mul!(dico2, data, X')
-        broadcast!(+, dico, dico, dico2)  
+        mul!(dico, Y, X')
+        broadcast!(+, dico, dico, dico)  
 
         normalise!(dico)
     end
