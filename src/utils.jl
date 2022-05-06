@@ -1,6 +1,7 @@
 
-
-
+function f(x,y)
+    2x + y
+end
 function normalise!(dico)
     @inbounds for k=1:size(dico)[2] 
         try

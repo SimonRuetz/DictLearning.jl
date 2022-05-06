@@ -19,7 +19,7 @@ function run_tests(;d::Int64 = 128,K::Int64 = 256,S::Int64 = 20,b::Int64 = 0,snr
     for k = 1:K
         Z[:,k] = Z[:,k]-(Z[:,k]'*dico[:,k])*dico[:,k]
         Z[:,k] = Z[:,k]/norm(Z[:,k])
-    end
+    end 
     # perturbed dictionary
     if eps == 0
     else
@@ -65,7 +65,7 @@ function run_tests(;d::Int64 = 128,K::Int64 = 256,S::Int64 = 20,b::Int64 = 0,snr
     #rtdico = itkrm_update!(X ,Y ,K,S,1,rtdico,ip ,gram,ix,ind)
     
     print(mean(maximum(abs,rtdico'*dico, dims = 1)))
-    print("   ")
+    print("  asdf ")
     
     # K-SVD using thresholding instead of OMP
     #ktdico = ksvd_threshold[Y,K,S,1,ktdico]
