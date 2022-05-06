@@ -1,0 +1,13 @@
+name = "DictLearning"
+uuid = "c475dd53-10e7-4fe9-b76b-ddd412c453de"
+authors = ["SimonRuetz <simon.ruetz@ubik.ac.at> and contributors"]
+version = "0.1.0"
+
+[compat]
+julia = "1.7"
+
+[extras]
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[targets]
+test = ["Test"]
