@@ -8,6 +8,7 @@ function itkrm(Y,S,K,dico,iter)
     X = zeros(K,N)
     gram = zeros(K,K)
     ix = [collect(1:K) for t in 1:Threads.nthreads()]
+    dicos = [zeros(d,K) for t in 1:Threads.nthreads() ]
     ind= [Vector{Int}(undef,S) for t in 1:Threads.nthreads()]
 
     for i = 1:iter
@@ -20,17 +21,18 @@ function itkrm(Y,S,K,dico,iter)
 
         #### thresholding on all signals
         @inbounds Threads.@threads for n = 1:N  
-            ind[Threads.threadid()] = maxk!(ix[Threads.threadid()],@view(ip[:,n]),S,initialized = true, reversed = true)
-            X[ind[Threads.threadid()], n] = (@view(gram[ind[Threads.threadid()],ind[Threads.threadid()]] ))\(@view(ip[ind[Threads.threadid()],n]))
+            ind[Threads.threadid()] = maxk!(ix[Threads.threadid()],@view(absip[:,n]),S,initialized = true, reversed = true)
+            try
+                X[ind[Threads.threadid()], n] = (@view(gram[ind[Threads.threadid()],ind[Threads.threadid()]] ))\(@view(ip[ind[Threads.threadid()],n]))
+            catch e
+            end
+
+            dicos[Threads.threadid()][:,ind[Threads.threadid()]] += (Y[:,n] - dico[:,ind[Threads.threadid()]]*X[ind[Threads.threadid()], n])* signip[ind[Threads.threadid()],n]';
+            dicos[Threads.threadid()][:,ind[Threads.threadid()]] += dico[:,ind[Threads.threadid()]].*absip[ind[Threads.threadid()],n]';
         end 
         
         ### dictionary update step
-        mul!(Y,dico,X)
-        broadcast!(+, Y, Y, Y)
-        mul!(dico,dico,Diagonal(vec(sum(abs.(X),dims=2))))
-        broadcast!(sign, X, X)#X .= sign.(X)
-        mul!(dico, Y, X')
-        broadcast!(+, dico, dico, dico)  
+        dico = sum(dicos);
 
         normalise!(dico)
     end

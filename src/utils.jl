@@ -1,7 +1,7 @@
 
-function f(x,y)
-    2x + y
-end
+f(x,y) = 2x + y
+
+
 function normalise!(dico)
     @inbounds for k=1:size(dico)[2] 
         try
