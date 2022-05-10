@@ -1,5 +1,5 @@
 
-function run_tests(;d::Int64 = 128,K::Int64 = 256,S::Int64 = 6,b::Int64 = 0,snr::Float64 = 0.0,rho::Float64 = 0.,eps::Float64 = .9 ,N::Int64 = 2000,iter::Int64 = 10)
+function run_tests(;d::Int64 = 64,K::Int64 = 128,S::Int64 = 2,b::Int64 = 0,snr::Float64 = 0.0,rho::Float64 = 0.,eps::Float64 = 1.1 ,N::Int64 = 100000,iter::Int64 = 10)
     weights = ones(K,1)#0.3:1.2/(K-1):1.5; # weights for non-uniform sampling without replacement
     #p = randperm(K)
     ##weights = (1:K).^(-0.8)
@@ -59,8 +59,8 @@ function run_tests(;d::Int64 = 128,K::Int64 = 256,S::Int64 = 6,b::Int64 = 0,snr:
     #print(rtdico)
     var = zeros(3,iter+1,4);
     var[:,1,1] .= mean(maximum(abs,dico_init'*org_dico, dims = 1))
-    var[:,1,3] .= mean(mapslices(norm, dico_init-org_dico, dims=1))
-    var[:,1,4] .= maximum(mapslices(norm, dico_init-org_dico, dims=1))
+    var[:,1,3] .= mean(sqrt.(2*ones(1,K) -2*maximum(abs,dico_init'*org_dico, dims = 1)))
+    var[:,1,4] .= maximum(sqrt.(2*ones(1,K) -2*maximum(abs,dico_init'*org_dico, dims = 1)))
     var[:,1,2] .= sum(maximum(abs,dico_init'*org_dico, dims = 1).>0.9)/K
 
     for i = 1:iter
@@ -68,6 +68,8 @@ function run_tests(;d::Int64 = 128,K::Int64 = 256,S::Int64 = 6,b::Int64 = 0,snr:
         rtdico = itkrm(Y,S,K,rtdico,1)
         mtdico = mod(Y,S,K,rtdico,1)
         ktdico = ksvd(Y,S,K,rtdico,1)
+        
+        
         #rtdico = itkrm_update!(X ,Y ,K,S,1,rtdico,ip ,gram,ix,ind)
         
         #print(mean(maximum(abs,rtdico'*org_dico, dims = 1)))
@@ -75,18 +77,16 @@ function run_tests(;d::Int64 = 128,K::Int64 = 256,S::Int64 = 6,b::Int64 = 0,snr:
         var[1,i+1,1] = mean(maximum(abs,rtdico'*org_dico, dims = 1))
         var[2,i+1,1] = mean(maximum(abs,mtdico'*org_dico, dims = 1))
         var[3,i+1,1] = mean(maximum(abs,ktdico'*org_dico, dims = 1))
-        var[1,i+1,3] = mean(mapslices(norm, rtdico-org_dico, dims=1))
-        var[2,i+1,3] = mean(mapslices(norm, mtdico-org_dico, dims=1))
-        var[3,i+1,3] = mean(mapslices(norm, ktdico-org_dico, dims=1))
-        var[1,i+1,4] = maximum(mapslices(norm, rtdico-org_dico, dims=1))
-        var[2,i+1,4] = maximum(mapslices(norm, mtdico-org_dico, dims=1))
-        var[3,i+1,4] = maximum(mapslices(norm, ktdico-org_dico, dims=1))
+        var[1,i+1,3] = mean(sqrt.(2*ones(1,K) - 2*maximum(abs,rtdico'*org_dico, dims = 1)))
+        var[2,i+1,3] = mean(sqrt.(2*ones(1,K) - 2*maximum(abs,mtdico'*org_dico, dims = 1)))
+        var[3,i+1,3] = mean(sqrt.(2*ones(1,K) -2*maximum(abs,ktdico'*org_dico, dims = 1)))
+        var[1,i+1,4] = maximum(sqrt.(2*ones(1,K) -2*maximum(abs,rtdico'*org_dico, dims = 1)))
+        var[2,i+1,4] = maximum(sqrt.(2*ones(1,K) -2*maximum(abs,mtdico'*org_dico, dims = 1)))
+        var[3,i+1,4] = maximum(sqrt.(2*ones(1,K) -2*maximum(abs,ktdico'*org_dico, dims = 1)))
         var[1,i+1,2] = sum(maximum(abs,rtdico'*org_dico, dims = 1).>0.9)/K
         var[2,i+1,2] = sum(maximum(abs,mtdico'*org_dico, dims = 1).>0.9)/K
         var[3,i+1,2] = sum(maximum(abs,ktdico'*org_dico, dims = 1).>0.9)/K
     end
-
-
     f = Figure()
 
     axes = [Axis(f[i, j]) for i in 1:2, j in 1:2]
@@ -99,6 +99,7 @@ function run_tests(;d::Int64 = 128,K::Int64 = 256,S::Int64 = 6,b::Int64 = 0,snr:
         #axislegend(ax, position = :rb)
         ax.xlabel = "Iterations"
     end
+
     axes[1].title = "Average Inner Product"
     axislegend(axes[1],position = :rb)
     axes[2].title = "Number of Atoms with ip > 0.9"
