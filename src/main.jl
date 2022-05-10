@@ -1,5 +1,5 @@
 
-function run_tests(;d::Int64 = 64,K::Int64 = 128,S::Int64 = 2,b::Int64 = 0,snr::Float64 = 0.0,rho::Float64 = 0.,eps::Float64 = 1.1 ,N::Int64 = 100000,iter::Int64 = 10)
+function run_tests(;d::Int64 = 128,K::Int64 = 256,S::Int64 = 6,b::Int64 = 0,snr::Float64 = 0.0,rho::Float64 = 0.,eps::Float64 = 0.6 ,N::Int64 = 100000,iter::Int64 = 10)
     weights = ones(K,1)#0.3:1.2/(K-1):1.5; # weights for non-uniform sampling without replacement
     #p = randperm(K)
     ##weights = (1:K).^(-0.8)
