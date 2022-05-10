@@ -1,5 +1,15 @@
 
-function itkrm(Y,S,K,dico,iter)
+function itkrm(Y,S,K,dico)
+    #### ITkrM algorithm
+    # one iteration of the ITkrM dictionary learning algorithm with thresholding.
+
+    # Y ..... Data
+    # S ..... Sparsity
+    # K ..... Number of dictionary elements
+    # dico ..... initial dictionary
+ 
+    #### 2022 Simon Ruetz
+
     ### Allocations for more speed
     d,N = size(Y)
     ip = zeros(K,N)
@@ -19,21 +29,24 @@ function itkrm(Y,S,K,dico,iter)
         signip=sign.(ip)
         mul!(gram,dico',dico)
 
-        #### thresholding on all signals
+        
         @inbounds Threads.@threads for n = 1:N  
+            #### thresholding 
             ind[Threads.threadid()] = maxk!(ix[Threads.threadid()],@view(absip[:,n]),S,initialized = true, reversed = true)
             try
                 X[ind[Threads.threadid()], n] = (@view(gram[ind[Threads.threadid()],ind[Threads.threadid()]] ))\(@view(ip[ind[Threads.threadid()],n]))
             catch e
             end
 
+            ### dictionary update step
             dicos[Threads.threadid()][:,ind[Threads.threadid()]] += (Y[:,n] - dico[:,ind[Threads.threadid()]]*X[ind[Threads.threadid()], n])* signip[ind[Threads.threadid()],n]';
             dicos[Threads.threadid()][:,ind[Threads.threadid()]] += dico[:,ind[Threads.threadid()]].*absip[ind[Threads.threadid()],n]';
         end 
         
-        ### dictionary update step
+        #sum over the different Threads (combine the different dictionaries)
         dico = sum(dicos);
 
+        #normalisation of all atoms to norm 1
         normalise!(dico)
     end
 

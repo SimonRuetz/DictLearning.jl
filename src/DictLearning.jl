@@ -1,9 +1,8 @@
 module DictLearning
 
-export mod, ksvd, itkrm, run_tests, f
+export mod, ksvd, itkrm, run_tests
 
 using LinearAlgebra
-#using Plots
 using Random
 using BenchmarkTools
 using Base.Threads
@@ -20,10 +19,5 @@ include("itkrm.jl")
 include("main.jl")
 include("makesparsesig.jl")
 
-# using StaticArrays
-# using TimerOutputs
-# const to = TimerOutput()
-# using Infiltrator
-# using OrthoMatchingPursuit
 
 end
