@@ -1,5 +1,13 @@
 
+
+
+
+
 function run_tests(;d::Int64 = 128,K::Int64 = 256,S::Int64 = 6,b::Int64 = 0,snr::Float64 = 0.0,rho::Float64 = 0.,eps::Float64 = 0.6 ,N::Int64 = 100000,iter::Int64 = 10)
+    #### Testfile to reproduce plots in the paper. 
+
+    
+    
     weights = ones(K,1)#0.3:1.2/(K-1):1.5; # weights for non-uniform sampling without replacement
     #p = randperm(K)
     ##weights = (1:K).^(-0.8)
@@ -65,9 +73,9 @@ function run_tests(;d::Int64 = 128,K::Int64 = 256,S::Int64 = 6,b::Int64 = 0,snr:
 
     for i = 1:iter
         Y = generate!(Y,w,x1toS,rho,N,K,p,S,dico,d)
-        rtdico = itkrm(Y,S,K,rtdico,1)
-        mtdico = mod(Y,S,K,rtdico,1)
-        ktdico = ksvd(Y,S,K,rtdico,1)
+        rtdico = itkrm(Y,S,K,rtdico)
+        mtdico = mod(Y,S,K,rtdico)
+        ktdico = ksvd(Y,S,K,rtdico)
         
         
         #rtdico = itkrm_update!(X ,Y ,K,S,1,rtdico,ip ,gram,ix,ind)
