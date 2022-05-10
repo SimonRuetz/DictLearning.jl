@@ -1,5 +1,5 @@
 
-function run_tests(;d::Int64 = 64,K::Int64 = 128,S::Int64 = 2,b::Int64 = 0,snr::Float64 = 0.0,rho::Float64 = 0.,eps::Float64 = .9 ,N::Int64 = 200000,iter::Int64 = 10)
+function run_tests(;d::Int64 = 128,K::Int64 = 256,S::Int64 = 6,b::Int64 = 0,snr::Float64 = 0.0,rho::Float64 = 0.,eps::Float64 = .9 ,N::Int64 = 2000,iter::Int64 = 10)
     weights = ones(K,1)#0.3:1.2/(K-1):1.5; # weights for non-uniform sampling without replacement
     #p = randperm(K)
     ##weights = (1:K).^(-0.8)
@@ -52,26 +52,71 @@ function run_tests(;d::Int64 = 64,K::Int64 = 128,S::Int64 = 2,b::Int64 = 0,snr::
     #savefile = strcat("comp_synth_data_its_d',num2str(d),'_K',num2str(K),'_S',num2str(S),'_N',num2str(N),'_maxit',num2str(maxit),'_b',num2str(b),'_',dicotype,'.mat")
 
     ### create signal generating dictionary and generate signals
-    rtdico = copy(dico_init)
+    rtdico = copy(dico_init);
+    mtdico = copy(dico_init);
+    ktdico = copy(dico_init);
+
     #print(rtdico)
+    var = zeros(3,iter+1,4);
+    var[:,1,1] .= mean(maximum(abs,dico_init'*org_dico, dims = 1))
+    var[:,1,3] .= mean(mapslices(norm, dico_init-org_dico, dims=1))
+    var[:,1,4] .= maximum(mapslices(norm, dico_init-org_dico, dims=1))
+    var[:,1,2] .= sum(maximum(abs,dico_init'*org_dico, dims = 1).>0.9)/K
+
     for i = 1:iter
-        
         Y = generate!(Y,w,x1toS,rho,N,K,p,S,dico,d)
-        
-        rtdico = mod(Y,S,K,rtdico,1)
+        rtdico = itkrm(Y,S,K,rtdico,1)
+        mtdico = mod(Y,S,K,rtdico,1)
+        ktdico = ksvd(Y,S,K,rtdico,1)
         #rtdico = itkrm_update!(X ,Y ,K,S,1,rtdico,ip ,gram,ix,ind)
         
-        print(mean(maximum(abs,rtdico'*org_dico, dims = 1)))
-        print("  ;lkj ")
-        
+        #print(mean(maximum(abs,rtdico'*org_dico, dims = 1)))
 
-
-
-        # K-SVD using thresholding instead of OMP
-        #ktdico = ksvd_threshold[Y,K,S,1,ktdico]
-
-        # MOD using thresholding instead of OMP
-        #mtdico = mod_dico_threshold[Y,K,S,1,mtdico]
+        var[1,i+1,1] = mean(maximum(abs,rtdico'*org_dico, dims = 1))
+        var[2,i+1,1] = mean(maximum(abs,mtdico'*org_dico, dims = 1))
+        var[3,i+1,1] = mean(maximum(abs,ktdico'*org_dico, dims = 1))
+        var[1,i+1,3] = mean(mapslices(norm, rtdico-org_dico, dims=1))
+        var[2,i+1,3] = mean(mapslices(norm, mtdico-org_dico, dims=1))
+        var[3,i+1,3] = mean(mapslices(norm, ktdico-org_dico, dims=1))
+        var[1,i+1,4] = maximum(mapslices(norm, rtdico-org_dico, dims=1))
+        var[2,i+1,4] = maximum(mapslices(norm, mtdico-org_dico, dims=1))
+        var[3,i+1,4] = maximum(mapslices(norm, ktdico-org_dico, dims=1))
+        var[1,i+1,2] = sum(maximum(abs,rtdico'*org_dico, dims = 1).>0.9)/K
+        var[2,i+1,2] = sum(maximum(abs,mtdico'*org_dico, dims = 1).>0.9)/K
+        var[3,i+1,2] = sum(maximum(abs,ktdico'*org_dico, dims = 1).>0.9)/K
     end
-end
 
+
+    f = Figure()
+
+    axes = [Axis(f[i, j]) for i in 1:2, j in 1:2]
+
+    xs = 1:iter+1;
+    for (i, ax) in enumerate(axes)
+        lines!(ax,xs,var[1,:,i],label = "ITkrM")
+        lines!(ax,xs,var[2,:,i],label = "MOD")
+        lines!(ax,xs,var[3,:,i],label = "K-SVD")
+        #axislegend(ax, position = :rb)
+        ax.xlabel = "Iterations"
+    end
+    axes[1].title = "Average Inner Product"
+    axislegend(axes[1],position = :rb)
+    axes[2].title = "Number of Atoms with ip > 0.9"
+    axislegend(axes[2],position = :rb)
+    axes[3].title = "Average Distance"
+    axislegend(axes[3],position = :rt)
+    axes[4].title = "Biggest Distance" 
+    axislegend(axes[4],position = :rt)
+    # axes[1].xticks = 0:6
+
+    # axes[2].xticks = 0:pi:2pi
+    # axes[2].xtickformat = xs -> ["$(x/pi)π" for x in xs]
+
+    # axes[3].xticks = (0:pi:2pi, ["start", "middle", "end"])
+
+    # axes[4].xticks = 0:pi:2pi
+    # axes[4].xtickformat = "{:.2f}ms"
+    # 
+    #xes[4].xlabel = "Time"
+    f
+end
