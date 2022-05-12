@@ -3,7 +3,7 @@
 
 
 
-function run_tests(;d::Int64 = 2^12,K::Int64 = 2^13,S::Int64 = 100,b::Int64 = 0,snr::Float64 = 0.0,rho::Float64 = 0.,eps::Float64 = 0.6 ,N::Int64 = 1,iter::Int64 = 2)
+function run_tests(;d::Int64 = 128,K::Int64 = 256,S::Int64 = 6,b::Int64 = 0,snr::Float64 = 0.0,rho::Float64 = 0.,eps::Float64 = 1.3 ,N::Int64 = 100000,iter::Int64 = 20)
     #### Testfile to reproduce plots in the paper. 
 
     
@@ -71,6 +71,8 @@ function run_tests(;d::Int64 = 2^12,K::Int64 = 2^13,S::Int64 = 100,b::Int64 = 0,
     var[:,1,4] .= maximum(sqrt.(2*ones(1,K) -2*maximum(abs,dico_init'*org_dico, dims = 1)))
     var[:,1,2] .= sum(maximum(abs,dico_init'*org_dico, dims = 1).>0.9)/K
 
+
+    p = Progress(iter, dt=0.5,desc="Learning los dictionarios...",  barglyphs=BarGlyphs("[=> ]"), barlen=50, color=:black);
     for i = 1:iter
         Y = generate!(Y,w,x1toS,rho,N,K,p,S,dico,d)
         rtdico = itkrm(Y,S,K,rtdico)
@@ -94,6 +96,7 @@ function run_tests(;d::Int64 = 2^12,K::Int64 = 2^13,S::Int64 = 100,b::Int64 = 0,
         var[1,i+1,2] = sum(maximum(abs,rtdico'*org_dico, dims = 1).>0.9)/K
         var[2,i+1,2] = sum(maximum(abs,mtdico'*org_dico, dims = 1).>0.9)/K
         var[3,i+1,2] = sum(maximum(abs,ktdico'*org_dico, dims = 1).>0.9)/K
+        next!(p)
     end
     f = Figure()
 

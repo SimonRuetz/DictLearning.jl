@@ -10,6 +10,7 @@ using Base.Sort
 using StatsBase
 using Makie
 using CairoMakie
+using ProgressMeter
 
 # Write your package code here.
 include("utils.jl")
