@@ -21,34 +21,33 @@ function itkrm(Y,S,K,dico)
     dicos = [zeros(d,K) for t in 1:Threads.nthreads() ]
     ind= [Vector{Int}(undef,S) for t in 1:Threads.nthreads()]
 
-    for i = 1:iter
-        #### algorithm
-        mul!(ip,dico',Y)
-        
-        absip .= abs.(ip)
-        signip=sign.(ip)
-        mul!(gram,dico',dico)
 
-        
-        @inbounds Threads.@threads for n = 1:N  
-            #### thresholding 
-            ind[Threads.threadid()] = maxk!(ix[Threads.threadid()],@view(absip[:,n]),S,initialized = true, reversed = true)
-            try
-                X[ind[Threads.threadid()], n] = (@view(gram[ind[Threads.threadid()],ind[Threads.threadid()]] ))\(@view(ip[ind[Threads.threadid()],n]))
-            catch e
-            end
+    #### algorithm
+    mul!(ip,dico',Y)
+    
+    absip .= abs.(ip)
+    signip=sign.(ip)
+    mul!(gram,dico',dico)
 
-            ### dictionary update step
-            dicos[Threads.threadid()][:,ind[Threads.threadid()]] += (Y[:,n] - dico[:,ind[Threads.threadid()]]*X[ind[Threads.threadid()], n])* signip[ind[Threads.threadid()],n]';
-            dicos[Threads.threadid()][:,ind[Threads.threadid()]] += dico[:,ind[Threads.threadid()]].*absip[ind[Threads.threadid()],n]';
-        end 
-        
-        #sum over the different Threads (combine the different dictionaries)
-        dico = sum(dicos);
+    
+    @inbounds Threads.@threads for n = 1:N  
+        #### thresholding 
+        ind[Threads.threadid()] = maxk!(ix[Threads.threadid()],@view(absip[:,n]),S,initialized = true, reversed = true)
+        try
+            X[ind[Threads.threadid()], n] = (@view(gram[ind[Threads.threadid()],ind[Threads.threadid()]] ))\(@view(ip[ind[Threads.threadid()],n]))
+        catch e
+        end
 
-        #normalisation of all atoms to norm 1
-        normalise!(dico)
-    end
+        ### dictionary update step
+        dicos[Threads.threadid()][:,ind[Threads.threadid()]] += (Y[:,n] - dico[:,ind[Threads.threadid()]]*X[ind[Threads.threadid()], n])* signip[ind[Threads.threadid()],n]';
+        dicos[Threads.threadid()][:,ind[Threads.threadid()]] += dico[:,ind[Threads.threadid()]].*absip[ind[Threads.threadid()],n]';
+    end 
+    
+    #sum over the different Threads (combine the different dictionaries)
+    dico = sum(dicos);
+
+    #normalisation of all atoms to norm 1
+    normalise!(dico)
 
     return dico
 end

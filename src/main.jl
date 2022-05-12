@@ -3,7 +3,7 @@
 
 
 
-function run_tests(;d::Int64 = 128,K::Int64 = 256,S::Int64 = 6,b::Int64 = 0,snr::Float64 = 0.0,rho::Float64 = 0.,eps::Float64 = 0.6 ,N::Int64 = 100000,iter::Int64 = 10)
+function run_tests(;d::Int64 = 2^12,K::Int64 = 2^13,S::Int64 = 100,b::Int64 = 0,snr::Float64 = 0.0,rho::Float64 = 0.,eps::Float64 = 0.6 ,N::Int64 = 1,iter::Int64 = 2)
     #### Testfile to reproduce plots in the paper. 
 
     
@@ -128,4 +128,6 @@ function run_tests(;d::Int64 = 128,K::Int64 = 256,S::Int64 = 6,b::Int64 = 0,snr:
     # 
     #xes[4].xlabel = "Time"
     f
+
+    println(var)
 end
