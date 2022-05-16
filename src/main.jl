@@ -3,11 +3,9 @@
 
 
 
-function run_tests(;d::Int64 = 128,K::Int64 = 256,S::Int64 = 6,b::Int64 = 0,snr::Float64 = 0.0,rho::Float64 = 0.,eps::Float64 = 1.3 ,N::Int64 = 100000,iter::Int64 = 20)
+function run_tests(;d::Int64 = 64,K::Int64 = 128,S::Int64 = 2,b::Float64 = 0.1 ,rho::Float64 = 0.,eps::Float64 = 0.8 ,N::Int64 = 10000,iter::Int64 = 300)
     #### Testfile to reproduce plots in the paper. 
 
-    
-    
     weights = ones(K,1)#0.3:1.2/(K-1):1.5; # weights for non-uniform sampling without replacement
     #p = randperm(K)
     ##weights = (1:K).^(-0.8)
@@ -19,22 +17,38 @@ function run_tests(;d::Int64 = 128,K::Int64 = 256,S::Int64 = 6,b::Int64 = 0,snr:
 
     ### initialisation of dictionary
     dico = randn(d,K)
+    dico = [Matrix(1.0I, d, d) idct(Matrix(1.0I, d, d),1) ]#ifwht(Matrix(1.0I, d, d)) randn(d,d)]
     normalise!(dico)
     org_dico = copy(dico)
     ##### start trials #################################
     # create perturbation orthogonal to each dico atom
-    Z = randn(d,K)
+    M = ones(K,K);
+    A = rand(K,K)
+    Q, R = qr(A)
+   
+    Z = randn(d,K;)
+    #Z = dico*M + randn(d,K)*0.01;
+    #bad = dico[:,1]
+
     for k = 1:K
         Z[:,k] = Z[:,k]-(Z[:,k]'*dico[:,k])*dico[:,k]
         Z[:,k] = Z[:,k]/norm(Z[:,k])
     end 
     # perturbed dictionary
     if eps == 0
-        dico_init = randn(d,K);
+        dico_init = Z;
     else
         dico_init = (1-eps^2/2)*dico + (eps^2-eps^4/4)^(1/2)*Z;
     end
-
+    
+    #dico_init = dico;
+    dico_init[:,1] = dico[:,1] + dico[:,2];
+    dico_init[:,2] = dico[:,3]
+    dico_init[:,5] = dico[:,4] + dico[:,5];
+    dico_init[:,4] = dico[:,6]
+    # dico_init[:,3] = (1-eps^2/2)*dico[:,3] + (eps^2-eps^4/4)^(1/2)*dico[:,1] ;
+    # dico_init[:,3] = (1-eps^2/2)*dico[:,3] + (eps^2-eps^4/4)^(1/2)*dico[:,1] ;
+    #dico_init[:,1] += randn(d,1)
     normalise!(dico_init) 
     x1toS=sqrt(1/S).*(1-b).^(1:S)
     x1toS = x1toS./norm(x1toS)
@@ -44,10 +58,11 @@ function run_tests(;d::Int64 = 128,K::Int64 = 256,S::Int64 = 6,b::Int64 = 0,snr:
     function generate!(Y,w,x1toS,rho,N,K,p,S,dico,d)
         @inbounds Threads.@threads for n = 1:N
             sample!(1:K,w, p[Threads.threadid()]; replace=false, ordered=false)
-            #rand!(@view(Y[:,n]))
+            
             x1toS .= x1toS.*rand([-1, 1],(S))
-            #mul!(@view(Y[:,n]),@view(Y[:,n]),rho)
+            
             mul!(@view(Y[:,n]),@view(dico[:,p[Threads.threadid()]]),x1toS)
+            #Y[:,n] += randn(d,1)*rho;
             Y[:,n] = Y[:,n]./norm(Y[:,n])
         end
         return Y
@@ -67,17 +82,18 @@ function run_tests(;d::Int64 = 128,K::Int64 = 256,S::Int64 = 6,b::Int64 = 0,snr:
     #print(rtdico)
     var = zeros(3,iter+1,4);
     var[:,1,1] .= mean(maximum(abs,dico_init'*org_dico, dims = 1))
-    var[:,1,3] .= mean(sqrt.(2*ones(1,K) -2*maximum(abs,dico_init'*org_dico, dims = 1)))
-    var[:,1,4] .= maximum(sqrt.(2*ones(1,K) -2*maximum(abs,dico_init'*org_dico, dims = 1)))
+    var[:,1,3] .= mean(sqrt.(2*ones(1,K).+ 0.0000001 -2*maximum(abs,dico_init'*org_dico, dims = 1)))
+    var[:,1,4] .= maximum(sqrt.(2*ones(1,K).+ 0.0000001 -2*maximum(abs,dico_init'*org_dico, dims = 1)))
     var[:,1,2] .= sum(maximum(abs,dico_init'*org_dico, dims = 1).>0.9)/K
-
-
-    p = Progress(iter, dt=0.5,desc="Learning los dictionarios...",  barglyphs=BarGlyphs("[=> ]"), barlen=50, color=:black);
-    for i = 1:iter
+    println("size of dictionary:"*string(K))
+    println(var[1,1,4])
+    prog = Progress(iter, dt=0.5,desc="Learning los dictionarios...",  barglyphs=BarGlyphs("[=> ]"), barlen=50, color=:black);
+    i = 1
+    while i <= iter && round(var[1,i+1,2]*K) < K
         Y = generate!(Y,w,x1toS,rho,N,K,p,S,dico,d)
         rtdico = itkrm(Y,S,K,rtdico)
-        mtdico = mod(Y,S,K,rtdico)
-        ktdico = ksvd(Y,S,K,rtdico)
+        #mtdico = mod(Y,S,K,rtdico)
+        #ktdico = ksvd(Y,S,K,rtdico)
         
         
         #rtdico = itkrm_update!(X ,Y ,K,S,1,rtdico,ip ,gram,ix,ind)
@@ -87,18 +103,19 @@ function run_tests(;d::Int64 = 128,K::Int64 = 256,S::Int64 = 6,b::Int64 = 0,snr:
         var[1,i+1,1] = mean(maximum(abs,rtdico'*org_dico, dims = 1))
         var[2,i+1,1] = mean(maximum(abs,mtdico'*org_dico, dims = 1))
         var[3,i+1,1] = mean(maximum(abs,ktdico'*org_dico, dims = 1))
-        var[1,i+1,3] = mean(sqrt.(2*ones(1,K) - 2*maximum(abs,rtdico'*org_dico, dims = 1)))
-        var[2,i+1,3] = mean(sqrt.(2*ones(1,K) - 2*maximum(abs,mtdico'*org_dico, dims = 1)))
-        var[3,i+1,3] = mean(sqrt.(2*ones(1,K) -2*maximum(abs,ktdico'*org_dico, dims = 1)))
-        var[1,i+1,4] = maximum(sqrt.(2*ones(1,K) -2*maximum(abs,rtdico'*org_dico, dims = 1)))
-        var[2,i+1,4] = maximum(sqrt.(2*ones(1,K) -2*maximum(abs,mtdico'*org_dico, dims = 1)))
-        var[3,i+1,4] = maximum(sqrt.(2*ones(1,K) -2*maximum(abs,ktdico'*org_dico, dims = 1)))
-        var[1,i+1,2] = sum(maximum(abs,rtdico'*org_dico, dims = 1).>0.9)/K
-        var[2,i+1,2] = sum(maximum(abs,mtdico'*org_dico, dims = 1).>0.9)/K
-        var[3,i+1,2] = sum(maximum(abs,ktdico'*org_dico, dims = 1).>0.9)/K
-        next!(p)
+        var[1,i+1,3] = mean(sqrt.(2*ones(1,K) .+ 0.0000001 - 2*maximum(abs,rtdico'*org_dico, dims = 1)))
+        var[2,i+1,3] = mean(sqrt.(2*ones(1,K) .+ 0.0000001 - 2*maximum(abs,mtdico'*org_dico, dims = 1)))
+        var[3,i+1,3] = mean(sqrt.(2*ones(1,K) .+ 0.0000001 -2*maximum(abs,ktdico'*org_dico, dims = 1)))
+        var[1,i+1,4] = maximum(sqrt.(2*ones(1,K) .+ 0.0000001  -2*maximum(abs,rtdico'*org_dico, dims = 1)))
+        var[2,i+1,4] = maximum(sqrt.(2*ones(1,K) .+ 0.0000001 -2*maximum(abs,mtdico'*org_dico, dims = 1)))
+        var[3,i+1,4] = maximum(sqrt.(2*ones(1,K) .+ 0.0000001 -2*maximum(abs,ktdico'*org_dico, dims = 1)))
+        var[1,i+1,2] = sum(maximum(abs,rtdico'*org_dico, dims = 1).>0.95)/K
+        var[2,i+1,2] = sum(maximum(abs,mtdico'*org_dico, dims = 1).>0.95)/K
+        var[3,i+1,2] = sum(maximum(abs,ktdico'*org_dico, dims = 1).>0.95)/K
+        next!(prog; showvalues = [(:iter,i), (:found,round(var[1,i+1,2]*K))])
+        i += 1
     end
-    f = Figure()
+    f = Figure(resolution = (1200, 1200))
 
     axes = [Axis(f[i, j]) for i in 1:2, j in 1:2]
 
@@ -130,7 +147,11 @@ function run_tests(;d::Int64 = 128,K::Int64 = 256,S::Int64 = 6,b::Int64 = 0,snr:
     # axes[4].xtickformat = "{:.2f}ms"
     # 
     #xes[4].xlabel = "Time"
-    f
-
-    println(var)
+    display(f)
+    println(var[1,end,2])
+    if var[1,iter+1,2] == 1
+        println("success")
+    else
+        println("try again")
+    end
 end

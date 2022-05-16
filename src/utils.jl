@@ -1,10 +1,11 @@
 function normalise!(dico)
     # Function to normalise the columns of dico
+
     @inbounds for k=1:size(dico)[2] 
         try
             dico[:, k] =  @view(dico[:,k])./norm(@view(dico[:,k]))
         catch e
-            print(k)
+            print("fail")
         end
     end
 end

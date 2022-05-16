@@ -11,6 +11,9 @@ using StatsBase
 using Makie
 using CairoMakie
 using ProgressMeter
+using FFTW
+using Hadamard
+
 
 # Write your package code here.
 include("utils.jl")

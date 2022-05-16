@@ -36,6 +36,7 @@ function itkrm(Y,S,K,dico)
         try
             X[ind[Threads.threadid()], n] = (@view(gram[ind[Threads.threadid()],ind[Threads.threadid()]] ))\(@view(ip[ind[Threads.threadid()],n]))
         catch e
+            X[ind[Threads.threadid()], n] = (@view(dico[:,ind[Threads.threadid()]] ))\Y[:,n];
         end
 
         ### dictionary update step
