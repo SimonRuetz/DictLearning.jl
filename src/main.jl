@@ -3,12 +3,12 @@
 
 
 
-function run_tests(;d::Int64 = 64,K::Int64 = 128,S::Int64 = 2,b::Float64 = 0.1 ,rho::Float64 = 0.,eps::Float64 = 0.8 ,N::Int64 = 10000,iter::Int64 = 300)
+function run_tests(;d::Int64 = 64,K::Int64 = 128,S::Int64 = 2,b::Float64 = 0.1 ,rho::Float64 = 0.,eps::Float64 = 1.25 ,N::Int64 = 10000,iter::Int64 = 300)
     #### Testfile to reproduce plots in the paper. 
 
     weights = ones(K,1)#0.3:1.2/(K-1):1.5; # weights for non-uniform sampling without replacement
     #p = randperm(K)
-    ##weights = (1:K).^(-0.8)
+    #weights = (1:K).^(-0.8)
     #weights = reverse(weights, dist = 2)
     w = aweights(weights/sum(weights)*S)
 
@@ -17,7 +17,7 @@ function run_tests(;d::Int64 = 64,K::Int64 = 128,S::Int64 = 2,b::Float64 = 0.1 ,
 
     ### initialisation of dictionary
     dico = randn(d,K)
-    dico = [Matrix(1.0I, d, d) idct(Matrix(1.0I, d, d),1) ]#ifwht(Matrix(1.0I, d, d)) randn(d,d)]
+    #dico = [Matrix(1.0I, d, d) idct(Matrix(1.0I, d, d),1) ]#ifwht(Matrix(1.0I, d, d)) randn(d,d)]
     normalise!(dico)
     org_dico = copy(dico)
     ##### start trials #################################
@@ -25,13 +25,15 @@ function run_tests(;d::Int64 = 64,K::Int64 = 128,S::Int64 = 2,b::Float64 = 0.1 ,
     M = ones(K,K);
     A = rand(K,K)
     Q, R = qr(A)
-   
-    Z = randn(d,K;)
-    #Z = dico*M + randn(d,K)*0.01;
-    #bad = dico[:,1]
-
+    #@infiltrate
+    #Z = dico*(Q + Matrix(1.0I, K,K));#randn(d,K)*0.01;
+    Z = randn(d,K) #
+    normalise!(Z)
+    Z += 0.2*dico;
+    #bad = dico[:,1];
+    #@infiltrate
     for k = 1:K
-        Z[:,k] = Z[:,k]-(Z[:,k]'*dico[:,k])*dico[:,k]
+        #Z[:,k] =  Z[:,k]-(Z[:,k]'*dico[:,k])*dico[:,k]
         Z[:,k] = Z[:,k]/norm(Z[:,k])
     end 
     # perturbed dictionary
@@ -42,15 +44,15 @@ function run_tests(;d::Int64 = 64,K::Int64 = 128,S::Int64 = 2,b::Float64 = 0.1 ,
     end
     
     #dico_init = dico;
-    dico_init[:,1] = dico[:,1] + dico[:,2];
-    dico_init[:,2] = dico[:,3]
-    dico_init[:,5] = dico[:,4] + dico[:,5];
-    dico_init[:,4] = dico[:,6]
+    #dico_init[:,1] = dico[:,1] + dico[:,2];
+    #dico_init[:,2] = dico[:,3]
+    #dico_init[:,5] = dico[:,4] + dico[:,5];
+    #dico_init[:,4] = dico[:,6]
     # dico_init[:,3] = (1-eps^2/2)*dico[:,3] + (eps^2-eps^4/4)^(1/2)*dico[:,1] ;
     # dico_init[:,3] = (1-eps^2/2)*dico[:,3] + (eps^2-eps^4/4)^(1/2)*dico[:,1] ;
     #dico_init[:,1] += randn(d,1)
     normalise!(dico_init) 
-    x1toS=sqrt(1/S).*(1-b).^(1:S)
+    x1toS=[0.6 , 0.8];#sqrt(1/S).*(1-b).^(1:S)
     x1toS = x1toS./norm(x1toS)
     Y =  zeros(d,N)
     p = [collect(1:S) for t in 1:Threads.nthreads()] 
@@ -58,7 +60,7 @@ function run_tests(;d::Int64 = 64,K::Int64 = 128,S::Int64 = 2,b::Float64 = 0.1 ,
     function generate!(Y,w,x1toS,rho,N,K,p,S,dico,d)
         @inbounds Threads.@threads for n = 1:N
             sample!(1:K,w, p[Threads.threadid()]; replace=false, ordered=false)
-            
+            shuffle!(p[Threads.threadid()])
             x1toS .= x1toS.*rand([-1, 1],(S))
             
             mul!(@view(Y[:,n]),@view(dico[:,p[Threads.threadid()]]),x1toS)
@@ -92,8 +94,8 @@ function run_tests(;d::Int64 = 64,K::Int64 = 128,S::Int64 = 2,b::Float64 = 0.1 ,
     while i <= iter && round(var[1,i+1,2]*K) < K
         Y = generate!(Y,w,x1toS,rho,N,K,p,S,dico,d)
         rtdico = itkrm(Y,S,K,rtdico)
-        #mtdico = mod(Y,S,K,rtdico)
-        #ktdico = ksvd(Y,S,K,rtdico)
+        mtdico = mod(Y,S,K,mtdico)
+        ktdico = ksvd(Y,S,K,ktdico)
         
         
         #rtdico = itkrm_update!(X ,Y ,K,S,1,rtdico,ip ,gram,ix,ind)
