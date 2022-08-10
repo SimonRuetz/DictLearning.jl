@@ -1,6 +1,6 @@
 function normalise!(dico)
     # Function to normalise the columns of dico
-
+    @infiltrate
     @inbounds for k=1:size(dico)[2] 
         try
             dico[:, k] =  @view(dico[:,k])./norm(@view(dico[:,k]))

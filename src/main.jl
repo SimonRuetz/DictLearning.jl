@@ -3,7 +3,7 @@
 
 
 
-function run_tests(;d::Int64 = 64,K::Int64 = 128,S::Int64 = 2,b::Float64 = 0.1 ,rho::Float64 = 0.,eps::Float64 = 1.25 ,N::Int64 = 10000,iter::Int64 = 300)
+function run_tests(;d::Int64 = 64,K::Int64 = 64,S::Int64 = 2,b::Float64 = 0.1 ,rho::Float64 = 0.,eps::Float64 = 1.1 ,N::Int64 = 10000,iter::Int64 = 100)
     #### Testfile to reproduce plots in the paper. 
 
     weights = ones(K,1)#0.3:1.2/(K-1):1.5; # weights for non-uniform sampling without replacement
@@ -17,6 +17,9 @@ function run_tests(;d::Int64 = 64,K::Int64 = 128,S::Int64 = 2,b::Float64 = 0.1 ,
 
     ### initialisation of dictionary
     dico = randn(d,K)
+    A = rand(d,K)
+    Q, R = qr(A)
+    dico = Q
     #dico = [Matrix(1.0I, d, d) idct(Matrix(1.0I, d, d),1) ]#ifwht(Matrix(1.0I, d, d)) randn(d,d)]
     normalise!(dico)
     org_dico = copy(dico)
@@ -29,11 +32,11 @@ function run_tests(;d::Int64 = 64,K::Int64 = 128,S::Int64 = 2,b::Float64 = 0.1 ,
     #Z = dico*(Q + Matrix(1.0I, K,K));#randn(d,K)*0.01;
     Z = randn(d,K) #
     normalise!(Z)
-    Z += 0.2*dico;
+    #@Z += 0.2*dico;
     #bad = dico[:,1];
     #@infiltrate
     for k = 1:K
-        #Z[:,k] =  Z[:,k]-(Z[:,k]'*dico[:,k])*dico[:,k]
+        Z[:,k] =  Z[:,k]-(Z[:,k]'*dico[:,k])*dico[:,k]
         Z[:,k] = Z[:,k]/norm(Z[:,k])
     end 
     # perturbed dictionary
@@ -44,8 +47,8 @@ function run_tests(;d::Int64 = 64,K::Int64 = 128,S::Int64 = 2,b::Float64 = 0.1 ,
     end
     
     #dico_init = dico;
-    #dico_init[:,1] = dico[:,1] + dico[:,2];
-    #dico_init[:,2] = dico[:,3]
+    dico_init[:,1] = dico[:,1] + dico[:,2];
+    dico_init[:,2] = dico[:,3]
     #dico_init[:,5] = dico[:,4] + dico[:,5];
     #dico_init[:,4] = dico[:,6]
     # dico_init[:,3] = (1-eps^2/2)*dico[:,3] + (eps^2-eps^4/4)^(1/2)*dico[:,1] ;
