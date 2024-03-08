@@ -33,15 +33,16 @@ function itkrm(Y,S,K,dico)
     @inbounds Threads.@threads for n = 1:N  
         #### thresholding 
         ind[Threads.threadid()] = maxk!(ix[Threads.threadid()],@view(absip[:,n]),S,initialized = true, reversed = true)
-        try
-            X[ind[Threads.threadid()], n] = (@view(gram[ind[Threads.threadid()],ind[Threads.threadid()]] ))\(@view(ip[ind[Threads.threadid()],n]))
-        catch e
-            X[ind[Threads.threadid()], n] = (@view(dico[:,ind[Threads.threadid()]] ))\Y[:,n];
-        end
+        #try
+            @views X[ind[Threads.threadid()], n] = (gram[ind[Threads.threadid()],ind[Threads.threadid()]] )\(ip[ind[Threads.threadid()],n])
+            #@views X[ind[Threads.threadid()], n] = ip[ind[Threads.threadid()],n]
+        #catch e
+        #    X[ind[Threads.threadid()], n] = (@view(dico[:,ind[Threads.threadid()]] ))\Y[:,n];
+        #end
 
         ### dictionary update step
-        dicos[Threads.threadid()][:,ind[Threads.threadid()]] += (Y[:,n] - dico[:,ind[Threads.threadid()]]*X[ind[Threads.threadid()], n])* signip[ind[Threads.threadid()],n]';
-        dicos[Threads.threadid()][:,ind[Threads.threadid()]] += dico[:,ind[Threads.threadid()]].*absip[ind[Threads.threadid()],n]';
+        @views dicos[Threads.threadid()][:,ind[Threads.threadid()]] += (Y[:,n] - dico[:,ind[Threads.threadid()]]*X[ind[Threads.threadid()], n])* signip[ind[Threads.threadid()],n]';
+        @views dicos[Threads.threadid()][:,ind[Threads.threadid()]] += dico[:,ind[Threads.threadid()]].*absip[ind[Threads.threadid()],n]';
     end 
     
     #sum over the different Threads (combine the different dictionaries)

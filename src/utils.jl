@@ -1,6 +1,6 @@
 function normalise!(dico)
     # Function to normalise the columns of dico
-    @infiltrate
+    #@infiltrate
     @inbounds for k=1:size(dico)[2] 
         try
             dico[:, k] =  @view(dico[:,k])./norm(@view(dico[:,k]))
@@ -8,6 +8,10 @@ function normalise!(dico)
             print("fail")
         end
     end
+end
+
+function normalise_metal!(dico,diag_metal)
+   
 end
 
 

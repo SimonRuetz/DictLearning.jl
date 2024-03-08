@@ -1,12 +1,21 @@
+using LinearAlgebra
+using Random
+using BenchmarkTools
+using Base.Threads
+using Base.Sort
+using StatsBase
+using Makie
+using GLMakie
+using ProgressMeter
+using FFTW
+using Hadamard
+using Infiltrator
+using Metal
 
-
-
-
-
-function run_tests(;d::Int64 = 64,K::Int64 = 64,S::Int64 = 2,b::Float64 = 0.1 ,rho::Float64 = 0.,eps::Float64 = 1.1 ,N::Int64 = 10000,iter::Int64 = 100)
+function run_tests(;d::Int64 = 64,K::Int64 = 128,S::Int64 = 4, b::Float64 = 0.1 ,rho::Float64 = 0.4, eps::Float64 = 0.7 ,N::Int64 = 100000,iter::Int64 = 20)
     #### Testfile to reproduce plots in the paper. 
 
-    weights = ones(K,1)#0.3:1.2/(K-1):1.5; # weights for non-uniform sampling without replacement
+    weights = 0.3:1.2/(K-1):1.5; # weights for non-uniform sampling without replacement
     #p = randperm(K)
     #weights = (1:K).^(-0.8)
     #weights = reverse(weights, dist = 2)
@@ -17,19 +26,12 @@ function run_tests(;d::Int64 = 64,K::Int64 = 64,S::Int64 = 2,b::Float64 = 0.1 ,r
 
     ### initialisation of dictionary
     dico = randn(d,K)
-    A = rand(d,K)
-    Q, R = qr(A)
-    dico = Q
+    
     #dico = [Matrix(1.0I, d, d) idct(Matrix(1.0I, d, d),1) ]#ifwht(Matrix(1.0I, d, d)) randn(d,d)]
     normalise!(dico)
     org_dico = copy(dico)
-    ##### start trials #################################
-    # create perturbation orthogonal to each dico atom
-    M = ones(K,K);
-    A = rand(K,K)
-    Q, R = qr(A)
-    #@infiltrate
-    #Z = dico*(Q + Matrix(1.0I, K,K));#randn(d,K)*0.01;
+
+
     Z = randn(d,K) #
     normalise!(Z)
     #@Z += 0.2*dico;
@@ -47,15 +49,15 @@ function run_tests(;d::Int64 = 64,K::Int64 = 64,S::Int64 = 2,b::Float64 = 0.1 ,r
     end
     
     #dico_init = dico;
-    dico_init[:,1] = dico[:,1] + dico[:,2];
-    dico_init[:,2] = dico[:,3]
+    #dico_init[:,1] = dico[:,1] + dico[:,2];
+    #dico_init[:,2] = dico[:,3]
     #dico_init[:,5] = dico[:,4] + dico[:,5];
     #dico_init[:,4] = dico[:,6]
     # dico_init[:,3] = (1-eps^2/2)*dico[:,3] + (eps^2-eps^4/4)^(1/2)*dico[:,1] ;
     # dico_init[:,3] = (1-eps^2/2)*dico[:,3] + (eps^2-eps^4/4)^(1/2)*dico[:,1] ;
     #dico_init[:,1] += randn(d,1)
     normalise!(dico_init) 
-    x1toS=[0.6 , 0.8];#sqrt(1/S).*(1-b).^(1:S)
+    x1toS=sqrt(1/S).*(1-b).^(1:S)
     x1toS = x1toS./norm(x1toS)
     Y =  zeros(d,N)
     p = [collect(1:S) for t in 1:Threads.nthreads()] 
@@ -67,7 +69,7 @@ function run_tests(;d::Int64 = 64,K::Int64 = 64,S::Int64 = 2,b::Float64 = 0.1 ,r
             x1toS .= x1toS.*rand([-1, 1],(S))
             
             mul!(@view(Y[:,n]),@view(dico[:,p[Threads.threadid()]]),x1toS)
-            #Y[:,n] += randn(d,1)*rho;
+            Y[:,n] += randn(d,1)*rho;
             Y[:,n] = Y[:,n]./norm(Y[:,n])
         end
         return Y
@@ -94,9 +96,31 @@ function run_tests(;d::Int64 = 64,K::Int64 = 64,S::Int64 = 2,b::Float64 = 0.1 ,r
     println(var[1,1,4])
     prog = Progress(iter, dt=0.5,desc="Learning los dictionarios...",  barglyphs=BarGlyphs("[=> ]"), barlen=50, color=:black);
     i = 1
+    
+
+
+    # ip_metal = MtlArray(Float32.(zeros(K,N)))
+    # absip_metal = MtlArray(Float32.(zeros(K,N)))
+    # ind_metal = MtlArray(Float32.(zeros(K,N)))
+    # ma_metal = ones(K,K)-diagm(ones(K))
+    # diag_zero = MtlArray(Float32.(ma_metal))
+    # ma_metal = zeros(K,K)+diagm(ones(K))
+    # diag_one = MtlArray(Float32.(ma_metal))
+    # rtdico_metal = MtlArray(Float32.(rtdico))
+    Y = generate!(Y,w,x1toS,rho,N,K,p,S,dico,d)
+        
+    # Y_metal = MtlArray(Float32.(Y))
+
+    #@infiltrate
+    
+
+
     while i <= iter && round(var[1,i+1,2]*K) < K
-        Y = generate!(Y,w,x1toS,rho,N,K,p,S,dico,d)
+        #@infiltrate
         rtdico = itkrm(Y,S,K,rtdico)
+        #rtdico_metal = itkrm_metal(d,N,ip_metal,absip_metal,diag_zero,Y_metal,S,K,rtdico_metal,diag_one,ind_metal)
+        
+        
         mtdico = mod(Y,S,K,mtdico)
         ktdico = ksvd(Y,S,K,ktdico)
         
