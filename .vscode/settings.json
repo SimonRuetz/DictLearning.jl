@@ -1,3 +1,7 @@
 {
-    "julia.executablePath": "julia beta"
+    "julia.executablePath": "julia beta",
+    "julia.NumThreads": 16,
+    "settingsSync.ignoredSettings": [
+        "-julia.NumThreads"
+    ],
 }

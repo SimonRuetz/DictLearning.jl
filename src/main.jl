@@ -5,17 +5,16 @@ using Base.Threads
 using Base.Sort
 using StatsBase
 using Makie
-using GLMakie
 using ProgressMeter
+using CairoMakie
 using FFTW
 using Hadamard
 using Infiltrator
-using Metal
 
-function run_tests(;d::Int64 = 64,K::Int64 = 128,S::Int64 = 4, b::Float64 = 0.1 ,rho::Float64 = 0.4, eps::Float64 = 0.7 ,N::Int64 = 100000,iter::Int64 = 20)
+function run_tests(;d::Int64 = 32,K::Int64 = 64,S::Int64 = 6, b::Float64 = 0.1 ,rho::Float64 = 0.0, eps::Float64 = 0.7 ,N::Int64 = 10000,iter::Int64 = 100)
     #### Testfile to reproduce plots in the paper. 
 
-    weights = 0.3:1.2/(K-1):1.5; # weights for non-uniform sampling without replacement
+    weights = 0.3:10.2/(K-1):10.5; # weights for non-uniform sampling without replacement
     #p = randperm(K)
     #weights = (1:K).^(-0.8)
     #weights = reverse(weights, dist = 2)
@@ -37,17 +36,17 @@ function run_tests(;d::Int64 = 64,K::Int64 = 128,S::Int64 = 4, b::Float64 = 0.1 
     #@Z += 0.2*dico;
     #bad = dico[:,1];
     #@infiltrate
-    for k = 1:K
-        Z[:,k] =  Z[:,k]-(Z[:,k]'*dico[:,k])*dico[:,k]
-        Z[:,k] = Z[:,k]/norm(Z[:,k])
-    end 
-    # perturbed dictionary
-    if eps == 0
-        dico_init = Z;
-    else
-        dico_init = (1-eps^2/2)*dico + (eps^2-eps^4/4)^(1/2)*Z;
-    end
-    
+    # for k = 1:K
+    #     Z[:,k] =  Z[:,k]-(Z[:,k]'*dico[:,k])*dico[:,k]
+    #     Z[:,k] = Z[:,k]/norm(Z[:,k])
+    # end 
+    # # # perturbed dictionary
+    # if eps == 0
+    #     dico_init = Z;
+    # else
+    #     dico_init = (1-eps^2/2)*dico + (eps^2-eps^4/4)^(1/2)*Z;
+    # end
+    dico_init = Z;
     #dico_init = dico;
     #dico_init[:,1] = dico[:,1] + dico[:,2];
     #dico_init[:,2] = dico[:,3]
@@ -56,6 +55,7 @@ function run_tests(;d::Int64 = 64,K::Int64 = 128,S::Int64 = 4, b::Float64 = 0.1 
     # dico_init[:,3] = (1-eps^2/2)*dico[:,3] + (eps^2-eps^4/4)^(1/2)*dico[:,1] ;
     # dico_init[:,3] = (1-eps^2/2)*dico[:,3] + (eps^2-eps^4/4)^(1/2)*dico[:,1] ;
     #dico_init[:,1] += randn(d,1)
+    #dico_init = (dico_init * diagm(w.^2) * dico_init')^(-1) * dico_init * diagm(w)
     normalise!(dico_init) 
     x1toS=sqrt(1/S).*(1-b).^(1:S)
     x1toS = x1toS./norm(x1toS)
@@ -117,12 +117,19 @@ function run_tests(;d::Int64 = 64,K::Int64 = 128,S::Int64 = 4, b::Float64 = 0.1 
 
     while i <= iter && round(var[1,i+1,2]*K) < K
         #@infiltrate
-        rtdico = itkrm(Y,S,K,rtdico)
+        # rtdico = (rtdico * diagm(w) * rtdico')^(-1/2) * rtdico * diagm(w)
+        # normalise!(rtdico)
+        # mtdico = (mtdico * diagm(w) * mtdico')^(-1/2) * mtdico * diagm(w)
+        # normalise!(mtdico)
+        # ktdico = (ktdico * diagm(w) * ktdico')^(-1/2) * ktdico * diagm(w)
+        # normalise!(ktdico)
+        rtdico = mod_dl(Y,S,K,rtdico)
+        
         #rtdico_metal = itkrm_metal(d,N,ip_metal,absip_metal,diag_zero,Y_metal,S,K,rtdico_metal,diag_one,ind_metal)
         
         
-        mtdico = mod(Y,S,K,mtdico)
-        ktdico = ksvd(Y,S,K,ktdico)
+        mtdico = mod_dl_copy(Y,S,K,mtdico)
+        #ktdico = ksvd(Y,S,K,ktdico)
         
         
         #rtdico = itkrm_update!(X ,Y ,K,S,1,rtdico,ip ,gram,ix,ind)
@@ -150,9 +157,9 @@ function run_tests(;d::Int64 = 64,K::Int64 = 128,S::Int64 = 4, b::Float64 = 0.1 
 
     xs = 1:iter+1;
     for (i, ax) in enumerate(axes)
-        lines!(ax,xs,var[1,:,i],label = "ITkrM")
-        lines!(ax,xs,var[2,:,i],label = "MOD")
-        lines!(ax,xs,var[3,:,i],label = "K-SVD")
+        lines!(ax,xs,var[1,:,i],label = "KSVD")
+        lines!(ax,xs,var[2,:,i],label = "KSVD mit preconditioning")
+        #lines!(ax,xs,var[3,:,i],label = "K-SVD")
         #axislegend(ax, position = :rb)
         ax.xlabel = "Iterations"
     end
