@@ -1,7 +1,6 @@
-#module DictLearning
+# module DictLearning
 
-#export mod, ksvd, itkrm, run_tests
-
+# export run_tests_brain_data, run_tests, run_tests_mnist
 using LinearAlgebra
 using Random
 using BenchmarkTools
@@ -13,6 +12,10 @@ using ProgressMeter
 using FFTW
 using Hadamard
 using Infiltrator
+using MLDatasets
+using Flux
+using FileIO, Images, ProgressMeter, StatsBase, LinearAlgebra, Infiltrator, NPZ
+using Distributions
 # Write your package code here.
 include("utils.jl")
 include("mod_dl.jl")
@@ -24,3 +27,6 @@ include("itkrm_copy.jl")
 include("itkrm_metal.jl")
 include("main.jl")
 include("makesparsesig.jl")
+
+
+# end

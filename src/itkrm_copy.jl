@@ -31,7 +31,7 @@ function itkrm_copy(Y,S,K,dico)
         ind[Threads.threadid()] = maxk!(ix[Threads.threadid()],@view(absip[:,n]),S,initialized = true, reversed = true)
         est_weights[Threads.threadid()][ind[Threads.threadid()]] .+= 1
     end
-    weights = sum(est_weights)/sum(sum(est_weights))*S
+    weights = sum(est_weights)/sum(sum(est_weights))*S + ones(K)* 1e-6
     dico = (dico * diagm(weights) * dico')^(-1/2) * dico
     #normalisation of all atoms to norm 1
     normalise!(dico)
@@ -59,7 +59,26 @@ function itkrm_copy(Y,S,K,dico)
     #sum over the different Threads (combine the different dictionaries)
     dico = sum(dicos);
     #normalisation of all atoms to norm 1
-    normalise!(dico)
 
-    return dico
+    #normalisation of all atoms to norm 1
+    normalise!(dico)
+    mul!(ip,dico',Y)
+    
+    absip .= abs.(ip)
+    signip=sign.(ip)
+    mul!(gram,dico',dico)
+
+    
+    @inbounds Threads.@threads for n = 1:N  
+        #### thresholding 
+        ind[Threads.threadid()] = maxk!(ix[Threads.threadid()],@view(absip[:,n]),S,initialized = true, reversed = true)
+        #try
+            @views X[ind[Threads.threadid()], n] = (gram[ind[Threads.threadid()],ind[Threads.threadid()]] )\(ip[ind[Threads.threadid()],n])
+            #@views X[ind[Threads.threadid()], n] = ip[ind[Threads.threadid()],n]
+        #catch e
+        #    X[ind[Threads.threadid()], n] = (@view(dico[:,ind[Threads.threadid()]] ))\Y[:,n];
+        #end
+    end 
+    
+    return dico, X
 end

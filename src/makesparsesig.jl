@@ -28,3 +28,13 @@ function makesparsesig(dico,N,S,T,b,rho,bfix)
 
     return(sigN)
 end
+
+function bernoulli_sample(p, S)
+    supp = 1:length(p)
+    while sum(supp) != S
+        # length(p) Bernoulli flips with probability like in p
+        coins = Bernoulli.(p)
+        supp = rand.(coins)
+    end
+    return findall(!iszero,supp)
+end

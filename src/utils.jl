@@ -3,9 +3,18 @@ function normalise!(dico)
     #@infiltrate
     @inbounds for k=1:size(dico)[2] 
         try
+            
             dico[:, k] =  @view(dico[:,k])./norm(@view(dico[:,k]))
         catch e
+            print("fail 22")
+            
+            dico[:, k] = randn(size(dico, 1))
+            dico[:, k] =  @view(dico[:,k])./norm(@view(dico[:,k]))
+        end
+        if norm(dico[:, k]) <= 1e-4 || any(isnan.(dico[:, k])) || norm(dico[:, k]) >= 1e6 || any(isinf.(dico[:, k]))
             print("fail")
+            dico[:, k] = randn(size(dico, 1))
+            dico[:, k] =  @view(dico[:,k])./norm(@view(dico[:,k]))
         end
     end
 end
