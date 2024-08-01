@@ -1,22 +1,28 @@
 
 
 
-function mod_dl(Y,S,K,dico, d, N, ip, absip, X, gram, ix, ind, est_weights, weights)
+function mod_dl(Y,S,dico)
     #### MOD algorithm
     # one iteration of the mod dictionary learning algorithm with thresholding.
 
     # Y ..... Data
     # S ..... Sparsity
-    # K ..... Number of dictionary elements
-    # dico ..... initial dictionary
+    # dico ..... current dictionary
 
-    #### 2022 Simon Ruetz
+    #### 2024 Simon Ruetz
+    N = size(Y,2)
+    K = size(dico,2)
+    ip = zeros(Float64,K,N)
+    absip = zeros(Float64,K,N)
+    X = zeros(Float64,K,N)
+    gram = zeros(Float64,K,K)
+    weights = zeros(Float64,K)
+
     ip .= 0
     absip .= 0
     X .= 0
     gram .= 0
-    weights .= 0
-
+    
     #### algorithm
     mul!(ip,dico',Y)
     mul!(gram,dico',dico)
@@ -46,19 +52,20 @@ function mod_dl(Y,S,K,dico, d, N, ip, absip, X, gram, ix, ind, est_weights, weig
     dico = Y * X' * inv_XtX
     #normalisation of all atoms to norm 1
     normalise!(dico)
-    X .= 0
-    mul!(ip,dico',Y)
-    mul!(gram,dico',dico)
-    absip .= abs.(ip)
+    weights .= 0
+    est_weights= [zeros(K) for t in 1:Threads.nthreads()]
     ix = [collect(1:K) for t in 1:Threads.nthreads()]
     ind= [Vector{Int}(undef,S) for t in 1:Threads.nthreads()]
-    #### thresholding on all signals
-    @inbounds Threads.@threads for n = 1:N  
-        ind[Threads.threadid()] = maxk!(ix[Threads.threadid()],@view(absip[:,n]),S,initialized = true, reversed = true)
-        X[ind[Threads.threadid()], n] = pinv(dico[:, ind[Threads.threadid()]]) * Y[:,n]
-    end 
+    mul!(ip,dico',Y)
 
-    
-    # print(X)
-    return dico, X 
+    absip .= abs.(ip)
+
+    @inbounds Threads.@threads for n = 1:N
+        #### thresholding 
+        ind[Threads.threadid()] = maxk!(ix[Threads.threadid()],@view(absip[:,n]),S,initialized = true, reversed = true)
+        est_weights[Threads.threadid()][ind[Threads.threadid()]] .+= 1
+    end
+    weights = sum(est_weights)/sum(sum(est_weights))*S 
+
+    return dico, weights
 end

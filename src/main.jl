@@ -14,6 +14,63 @@ using FFTW
 using Hadamard
 using Infiltrator
 using Distributions
+using DelimitedFiles
+
+
+function create_convergence_plot()
+    d = 64
+    K = 128
+    S = 4
+    b = 0.0
+    rho = 0.0
+    eps = 0.8
+    runs = 100
+    iter = 8
+    alpha = 1.0
+    beta = 0.0
+    recovered = zeros(6, iter+1, 5)
+    j = 1
+    dec = 0
+    for N in [1250, 10000, 40000,160000]
+        for run in 1:runs
+            print(N, run)
+            if dec == 0
+                decaying = 1.
+            else 
+                decaying = 0.
+            end
+            
+            recovered[j, :,:] += run_tests(d=d,K=K,S=S,b=b,rho=rho,eps=eps,N=N,iter=iter,alpha=alpha,beta=beta,decaying=decaying)[1,:,:]/runs
+        end
+        dec = dec + 1
+        j = j+1
+    end
+    fig = Figure(size = (800, 600))
+    ax = CairoMakie.Axis(fig[1, 1], yscale = log10, xminorticksvisible = true, xminorgridvisible = true, xminorticksize = 6,
+        yminorticksize = 6, xlabel = "iteration", ylabel = L"$\delta(\Phi, \Psi)$",
+        titlesize = 23, ylabelsize = 21, xlabelsize = 18)
+    j = 1
+    for N in [1250, 10000, 40000,160000]
+        if N == 1250
+            scatterlines!(ax, 0:iter, max(recovered[j,:, 5],recovered[j,:, 4]), linewidth = 4, marker = :xcross, markersize = 13, label = "N adapted", linestyle = :dashdot, color = :red)
+        elseif N == 10000
+            scatterlines!(ax, 0:iter, max(recovered[j,:, 5],recovered[j,:, 4]), linewidth = 2,  marker = :circle, markersize = 13, label = "N = $N", colormap = :broc)
+        elseif N == 40000
+            scatterlines!(ax, 0:iter, max(recovered[j,:, 5],recovered[j,:, 4]), linewidth = 2, marker = :utriangle, markersize = 13, label = "N = $N", colormap = :broc)
+        elseif N == 160000
+            scatterlines!(ax, 0:iter, max(recovered[j,:, 5],recovered[j,:, 4]), linewidth = 2, marker = :diamond, markersize = 13, label = "N = $N", colormap = :broc)
+        end
+        j = j+1
+    end
+    lines!(ax, 0:iter, eps.*((3/4).^(0:iter)), linewidth = 2, markersize = 6, marker = :circle, label = "Reference line", linestyle = :dash, color = :black)
+    axislegend(ax)
+    display(fig)
+    save("convergence_plot_03072024.pdf", fig)
+
+    writedlm( "convergence_plot_new_expo_03072024.csv",  recovered, ',')
+end
+
+
 
 function create_2d_plot()
     # a function that calls run_tests for 10 values each of alpha and beta in 0,1 and then plots the number of recovered dict elements in a 2d heatmap
@@ -22,71 +79,92 @@ function create_2d_plot()
     S = 4
     b = 0.0
     rho = 0.0
-    eps = 1.1
+    eps = 0.0
     N = 10000
-    iter = 10
-    recovered = zeros(3,3,3) .+ 0.00000000001
-    runs = 100
+    iter = 5
+    recovered = zeros(3,6,6) .+ 0.00000000001
+    runs = 10
 
-    for i in 0:0.5:1
-        for j in 0:0.5:1
-            for l in 1:runs
+    for i in 0:1.0:1
+        for j in 0:1.0:1
+           for l in 1:runs
                 println(i,j,l)
-                recovered[:,round(Int,i*2)+1,round(Int,j*2)+1] += run_tests(d=d,K=K,S=S,b=b,rho=rho,eps=eps,N=N,iter=iter,alpha=i,beta=j)[1:3,end,2]/runs
+                recovered[:,round(Int,i*5)+1,round(Int,j*5)+1] += run_tests(d=d,K=K,S=S,b=b,rho=rho,eps=eps,N=N,iter=iter,alpha=i,beta=j)[1:3,end,2]/runs
             end
             # recovered[round(Int,i*10)+1,round(Int,j*10)+1] = run_tests(d=d,K=K,S=S,b=b,rho=rho,eps=eps,N=N,iter=iter,alpha=i,beta=j)[1,end,2]
         end
     end
     println(recovered)
-    fig = Figure(resolution = (1200, 1200))
-    ax = CairoMakie.Axis(fig[1, 1], yscale = log, title = string(scale),xminorticksvisible = true, xminorgridvisible = true)#,xminorticks = IntervalsBetween(5)) 
-    lines!(ax, 0:0.5:1, recovered[1,:, 1], color = :blue, linewidth = 2, markersize = 6, marker = :circle, label = "beta = 0.0")
-    # lines!(ax, 0:0.5:1, recovered[1,:, 2], color = :green, linewidth = 2, markersize = 6, marker = :circle, label = "beta = 0.5")
-    # lines!(ax, 0:0.5:1, recovered[1,:, 3], color = :red, linewidth = 2, markersize = 6, marker = :circle, label = "beta = 1.0")
+    fig = Figure(size = (1200, 1200))
+    # ax = CairoMakie.Axis(fig[1, 1], yscale = log, title = string(scale),xminorticksvisible = true, xminorgridvisible = true)#,xminorticks = IntervalsBetween(5)) 
+    # lines!(ax, 0:0.5:1, recovered[1,:, 1], color = :blue, linewidth = 2, markersize = 6, marker = :circle, label = "beta = 0.0")
+    # # lines!(ax, 0:0.5:1, recovered[1,:, 2], color = :green, linewidth = 2, markersize = 6, marker = :circle, label = "beta = 0.5")
+    # # lines!(ax, 0:0.5:1, recovered[1,:, 3], color = :red, linewidth = 2, markersize = 6, marker = :circle, label = "beta = 1.0")
 
-    lines!(ax, 0:0.5:1, recovered[2,:, 1], color = :orange, linewidth = 2, markersize = 6, marker = :square, label = "one preconditioning, beta = 0.0")
-    # lines!(ax, 0:0.5:1, recovered[2,:, 2], color = :purple, linewidth = 2, markersize = 6, marker = :square, label = "one preconditioning, beta = 0.5")
-    # lines!(ax, 0:0.5:1, recovered[2,:, 3], color = :pink, linewidth = 2, markersize = 6, marker = :square, label = "one preconditioning, beta = 1.0")
+    # lines!(ax, 0:0.5:1, recovered[2,:, 1], color = :orange, linewidth = 2, markersize = 6, marker = :square, label = "one preconditioning, beta = 0.0")
+    # # lines!(ax, 0:0.5:1, recovered[2,:, 2], color = :purple, linewidth = 2, markersize = 6, marker = :square, label = "one preconditioning, beta = 0.5")
+    # # lines!(ax, 0:0.5:1, recovered[2,:, 3], color = :pink, linewidth = 2, markersize = 6, marker = :square, label = "one preconditioning, beta = 1.0")
 
-    lines!(ax, 0:0.5:1, recovered[3,:, 1], color = :cyan, linewidth = 2, markersize = 6, marker = :diamond, label = "all preconditioning, beta = 0.0")
-    # lines!(ax, 0:0.5:1, recovered[3,:, 2], color = :magenta, linewidth = 2, markersize = 6, marker = :diamond, label = "all preconditioning, beta = 0.5")
-    # lines!(ax, 0:0.5:1, recovered[3,:, 3], color = :yellow, linewidth = 2, markersize = 6, marker = :diamond, label = "all preconditioning, beta = 1.0")
-    axislegend(ax,position = :rb)
-    display(fig)
+    # lines!(ax, 0:0.5:1, recovered[3,:, 1], color = :cyan, linewidth = 2, markersize = 6, marker = :diamond, label = "all preconditioning, beta = 0.0")
+    # # lines!(ax, 0:0.5:1, recovered[3,:, 2], color = :magenta, linewidth = 2, markersize = 6, marker = :diamond, label = "all preconditioning, beta = 0.5")
+    # # lines!(ax, 0:0.5:1, recovered[3,:, 3], color = :yellow, linewidth = 2, markersize = 6, marker = :diamond, label = "all preconditioning, beta = 1.0")
+    # axislegend(ax,position = :rb)
+    # display(fig)
 
-    # fig = Figure(resolution = (1200, 1200))
+    # fig = Figure(size = (1200, 1200))
     # ax = CairoMakie.Axis(fig[1, 1])#, yscale = log, title = "Number of Recovered Dict Elements", xminorticksvisible = true, xminorgridvisible = true)
     fig, ax, hm = heatmap(recovered[1,:,:], colormap = :grays)
     Colorbar(fig[:, end+1], hm)
     display(fig)
-
-    # fig = Figure(resolution = (1200, 1200))
-    #, yscale = log, title = "Number of Recovered Dict Elements", xminorticksvisible = true, xminorgridvisible = true)
-    fig, ax, hm = heatmap(recovered[2,:,:], colormap = :grays)
-    Colorbar(fig[:, end+1], hm)
-    display(fig)
-
+    save("recovered_dict_elements_2606.pdf", fig)
+    # # fig = Figure(size = (1200, 1200))
+    # #, yscale = log, title = "Number of Recovered Dict Elements", xminorticksvisible = true, xminorgridvisible = true)
+    # fig, ax, hm = heatmap(recovered[2,:,:], colormap = :grays)
+    # Colorbar(fig[:, end+1], hm)
+    # display(fig)
+    writedlm( "2d_plot_2606.csv",  recovered, ',')
 end
 
 
 function run_tests(;d::Int64 = 128,K::Int64 = 256,S::Int64 = 4, b::Float64 = 0.0,
-    rho::Float64 = 0., eps::Float64 = 1.1 ,N::Int64 = 1000,iter::Int64 = 50, alpha::Float64 = 1., beta::Float64 = 0.)
+    rho::Float64 = 0., eps::Float64 = 1.1 ,N::Int64 = 1000,iter::Int64 = 50, alpha::Float64 = 1., beta::Float64 = 0., decaying::Float64 = 0.)
     #### Testfile to reproduce plots in the paper. 
 
     # weights = 0.3:10.2/(K-1):10.5; # weights for non-uniform sampling without replacement
     #p = randperm(K)
-    weights = (1:K).^(-0.8)
-    # weights[1:Int(K/2)] .= 4
+    weights = (1:K).^(-0.5)
+    # weights[1:Int(K/2)] .= 10
     # weights[Int(K/2)+1:end] .= 1
-    weights .= 1.:9.0/(K-1):10.0;
+    # weights .= 1.:9.0/(K-1):10.0;
     # weights = abs.(randn(K))
     shuffle!(weights)
+    weights_sorted = sort(weights, rev = true)
+    
+    
+    # save("distribution_of_weights.pdf", fig)
     #weights .= 1
     # weights[1:Int(K/4)] .= 3
     # weights[Int(K/2)+1:Int(K/2)+Int(K/4)] .= 3
     #weights = reverse(weights, dist = 2)
     # println(weights)
     w = aweights(weights/sum(weights)*S)
+    inclusion_probs = zeros(K)
+    l = 0
+    while l < 100000
+        inclusion_probs[bernoulli_sample(w, S)] .+=1/100000
+        l = l +1
+    end
+    weights_sorted = sort(inclusion_probs, rev = true)
+    #plot weights
+    fig = Figure(size = (800, 600))
+    ax = CairoMakie.Axis(fig[1, 1],xminorticksvisible = true, xminorgridvisible = true, xminorticksize = 6,
+        yminorticksize = 6, xlabel = "index", ylabel = L"$\pi$",
+        titlesize = 23, ylabelsize = 21, xlabelsize = 18)
+    t = "inclusion probabilities"
+    CairoMakie.lines!(ax, weights_sorted, color = :black, label = L"%$(t) $\pi$")
+    axislegend(ax)
+    # display(fig)
+    # save("distribution_of_weights.pdf", fig)
 
     ### initialisation of dictionary
     dico = randn(d,K)   
@@ -94,7 +172,7 @@ function run_tests(;d::Int64 = 128,K::Int64 = 256,S::Int64 = 4, b::Float64 = 0.0
     # dico = [Matrix(1.0I, d, d) idct(Matrix(1.0I, d, d),1) ]#ifwht(Matrix(1.0I, d, d)) randn(d,d)]
     normalise!(dico)
 
-    diag_sqrt_weights = diagm(sqrt.(weights))
+    diag_sqrt_weights = diagm(sqrt.(inclusion_probs))
 
     dico_diag_sqrt_weights = dico * diag_sqrt_weights
     eigvals, eigvecs = eigen(dico_diag_sqrt_weights * dico_diag_sqrt_weights')
@@ -121,52 +199,30 @@ function run_tests(;d::Int64 = 128,K::Int64 = 256,S::Int64 = 4, b::Float64 = 0.0
     ax = CairoMakie.Axis(fig[1, 2])
     # display(fig)
 
-    println("Norm of dict:"*string(norm(diagm(sqrt.(w))*abs.(org_dico'*org_dico - diagm(ones(K)))*diagm(sqrt.(w)))))
-
     Z = randn(d,K) #
     normalise!(Z)
-    #@Z += 0.2*dico;
-    #bad = dico[:,1];
-    #@infiltrate
-    for k = 1:K
-        Z[:,k] =  Z[:,k]-(Z[:,k]'*dico[:,k])*dico[:,k]
-        Z[:,k] = Z[:,k]/norm(Z[:,k])
-     end 
-    # # # perturbed dictionary
-    if eps == 0
-        dico_init = Z;
+    if eps <= 0.1
+        Z_sorted = zeros(size(Z))
+        selected_idx = []
+        for k = 1:K
+            inner_products = abs.(Z' * dico[:, k])
+            max_idx = argmax(inner_products)
+            while max_idx in selected_idx
+                inner_products[max_idx] = 0
+                max_idx = argmax(inner_products)
+            end
+            selected_idx = [selected_idx; max_idx]
+            Z_sorted[:, k] = Z[:, max_idx]
+        end
+        Z = Z_sorted
+        dico_init = Z
     else
+        for k = 1:K
+            Z[:,k] =  Z[:,k]-(Z[:,k]'*dico[:,k])*dico[:,k]
+            Z[:,k] = Z[:,k]/norm(Z[:,k])
+        end 
         dico_init = (1-eps^2/2)*dico + (eps^2-eps^4/4)^(1/2)*Z;
     end
-    Z = randn(d,K) #
-
-    Z_sorted = zeros(size(Z))
-    selected_idx = []
-    for k = 1:K
-        inner_products = abs.(Z' * dico_init[:, k])
-        max_idx = argmax(inner_products)
-        while max_idx in selected_idx
-            inner_products[max_idx] = 0
-            max_idx = argmax(inner_products)
-        end
-        selected_idx = [selected_idx; max_idx]
-        Z_sorted[:, k] = Z[:, max_idx]
-    end
-    Z = Z_sorted
-
-
-    normalise!(Z)
-    dico_init = Z;
-
-    #dico_init = dico;
-    #dico_init[:,1] = dico[:,1] + dico[:,2];
-    #dico_init[:,2] = dico[:,3]
-    #dico_init[:,5] = dico[:,4] + dico[:,5];
-    #dico_init[:,4] = dico[:,6]
-    # dico_init[:,3] = (1-eps^2/2)*dico[:,3] + (eps^2-eps^4/4)^(1/2)*dico[:,1] ;
-    # dico_init[:,3] = (1-eps^2/2)*dico[:,3] + (eps^2-eps^4/4)^(1/2)*dico[:,1] ;
-    #dico_init[:,1] += randn(d,1)
-    #dico_init = (dico_init * diagm(w.^2) * dico_init')^(-1) * dico_init * diagm(w)
     normalise!(dico_init) 
 
     dico_diag_sqrt_weights = dico_init * diag_sqrt_weights
@@ -191,7 +247,7 @@ function run_tests(;d::Int64 = 128,K::Int64 = 256,S::Int64 = 4, b::Float64 = 0.0
     Y =  zeros(d,N)
     p = [collect(1:S) for t in 1:Threads.nthreads()] 
 
-    function generate!(Y,w,x1toS,rho,N,K,p,S,dico,d)
+    function generate!(Y,w,x1toS,rho,N,p,S,dico,d)
         @inbounds Threads.@threads for n = 1:N
             # sample!(1:K,w, p[Threads.threadid()]; replace=false, ordered=false)
             p[Threads.threadid()]=bernoulli_sample(w, S)
@@ -205,114 +261,35 @@ function run_tests(;d::Int64 = 128,K::Int64 = 256,S::Int64 = 4, b::Float64 = 0.0
         return Y
     end
     
-    function load_brain(d)
-        train_path::String=joinpath(pwd(), "images", "Brain4")
-        # load("brain_data.mat")
-        # d = 64
-        list = readdir(train_path)[2:end]
-        Y = zeros(d,len(list))
-        for j in eachindex(list)
-            img = imresize( Gray.(load(joinpath(path_vec,list[j]))),(sqrt(d),sqrt(d)))
-            img = convert(Matrix{Float64},img)
-            img = img./norm(img);
-            Y[:,j] = reshape(img,d)
-        end
-        return Y
-    end
-    # savefile noisy signals
-    # SNR = 1/(d*rho^2)
-    # savefile = strcat("comp_synth_data_its_d',num2str(d),'_K',num2str(K),'_S',num2str(S),'_N',num2str(N),'_maxit',num2str(maxit),'_b',num2str(b),'_SNR',num2str(SNR),'_',dicotype,'.mat")
-    # savefile noiseless signals
-    #savefile = strcat("comp_synth_data_its_d',num2str(d),'_K',num2str(K),'_S',num2str(S),'_N',num2str(N),'_maxit',num2str(maxit),'_b',num2str(b),'_',dicotype,'.mat")
-
     ### create signal generating dictionary and generate signals
     rtdico = copy(dico_init);
-    mtdico = copy(dico_init);
-    ktdico = copy(dico_init);
 
     #print(rtdico)
-    var = zeros(3,iter+1,4);
+    var = zeros(3,iter+1,5);
     var[:,1,1] .= mean(maximum(abs,dico_init'*org_dico, dims = 1))
     var[:,1,3] .= mean(sqrt.(2*ones(1,K).+ 0.0000001 -2*maximum(abs,dico_init'*org_dico, dims = 1)))
     var[:,1,4] .= maximum(sqrt.(2*ones(1,K).+ 0.0000001 -2*maximum(abs,dico_init'*org_dico, dims = 1)))
     var[:,1,2] .= sum(maximum(abs,dico_init'*org_dico, dims = 1).>0.9)/K
-    println("size of dictionary:"*string(K))
-    println(var[1,1,4])
-    prog = Progress(iter, dt=0.5,desc="Learning los dictionarios...",  barglyphs=BarGlyphs("[=> ]"), barlen=50, color=:black);
-    i = 1
-    
+    var[:,1,5] .= opnorm((rtdico -org_dico)*diagm(sqrt.(inclusion_probs)))
+    #println(var[1,1,4])
+    i = 0
+    while i < iter
+        if decaying == 1
+            Y_new = generate!(zeros(d,Int(round(N*(2)^(i)))),w,x1toS,rho,Int(round(N*(2)^(i))),p,S,dico,d)
+        else
+            Y_new = generate!(zeros(d,N),w,x1toS,rho,Int(N),p,S,dico,d)
+        end
+        rtdico, _ = mod_dl(Y_new, S,rtdico)
 
-
-    # ip_metal = MtlArray(Float32.(zeros(K,N)))
-    # absip_metal = MtlArray(Float32.(zeros(K,N)))
-    # ind_metal = MtlArray(Float32.(zeros(K,N)))
-    # ma_metal = ones(K,K)-diagm(ones(K))
-    # diag_zero = MtlArray(Float32.(ma_metal))
-    # ma_metal = zeros(K,K)+diagm(ones(K))
-    # diag_one = MtlArray(Float32.(ma_metal))
-    # rtdico_metal = MtlArray(Float32.(rtdico))
-    
-    Y = generate!(Y,w,x1toS,rho,N,K,p,S,dico,d)
-    
-    # Y_metal = MtlArray(Float32.(Y))
-
-    #@infiltrate
-    
-    d,N = size(Y)
-    ip = zeros(K,N)
-    absip = zeros(K,N)
-    X = zeros(K,N)
-    gram = zeros(K,K)
-    ix = [collect(1:K) for t in 1:Threads.nthreads()]
-    ind= [Vector{Int}(undef,S) for t in 1:Threads.nthreads()]
-    
-    est_weights= [zeros(K) for t in 1:Threads.nthreads()]
-    weights = zeros(K)
-    N_org = N
-    while i <= iter
-        Y = generate!(Y,w,x1toS,rho,N,K,p,S,dico,d)
-    
-        start_idx = Int((i-1) *  round(N_org/iter) + 1)
-        end_idx = Int(min(i * round(N_org/iter), size(Y, 2)))
-        Y_new = Y#Y[:, start_idx:end_idx]
-        d,N = size(Y_new)
-        ip = zeros(K,N)
-        absip = zeros(K,N)
-        X = zeros(K,N)
-        gram = zeros(K,K)
-        ix = [collect(1:K) for t in 1:Threads.nthreads()]
-        ind= [Vector{Int}(undef,S) for t in 1:Threads.nthreads()]
+        var[1,i+2,1] = mean(maximum(abs,rtdico'*org_dico, dims = 1))
+        var[1,i+2,3] = mean(sqrt.(2*ones(1,K) .+ 0.0000001 - 2*maximum(abs,rtdico'*org_dico, dims = 1)))
+        var[1,i+2,4] = maximum(sqrt.(2*ones(1,K) .+ 0.0000001  -2*maximum(abs,rtdico'*org_dico, dims = 1)))
+        var[1,i+2,2] = sum(maximum(abs,rtdico'*org_dico, dims = 1).>0.95)/K
+        var[1,i+2,5] = opnorm((rtdico -org_dico)*diagm(sqrt.(inclusion_probs)))
         
-        est_weights= [zeros(K) for t in 1:Threads.nthreads()]
-        weights = zeros(K)
-        rtdico, _ = mod_dl(Y_new, S, K, rtdico, d, N, ip, absip, X, gram, ix, ind, est_weights, weights)
-        
-        # if i == 1
-        #     mtdico, x_mdico = mod_dl_copy(Y_new, S, K, mtdico, d, N, ip, absip, X, gram, ix, ind, est_weights, weights)
-        # else
-        #     mtdico, _ = mod_dl(Y_new, S, K, mtdico, d, N, ip, absip, X, gram, ix, ind, est_weights, weights)
-        # end
-        
-        #rtdico = itkrm_update!(X ,Y ,K,S,1,rtdico,ip ,gram,ix,ind)
-        
-        #print(mean(maximum(abs,rtdico'*org_dico, dims = 1)))
-
-        var[1,i+1,1] = mean(maximum(abs,rtdico'*org_dico, dims = 1))
-        var[2,i+1,1] = mean(maximum(abs,mtdico'*org_dico, dims = 1))
-        var[3,i+1,1] = mean(maximum(abs,ktdico'*org_dico, dims = 1))
-        var[1,i+1,3] = mean(sqrt.(2*ones(1,K) .+ 0.0000001 - 2*maximum(abs,rtdico'*org_dico, dims = 1)))
-        var[2,i+1,3] = mean(sqrt.(2*ones(1,K) .+ 0.0000001 - 2*maximum(abs,mtdico'*org_dico, dims = 1)))
-        var[3,i+1,3] = mean(sqrt.(2*ones(1,K) .+ 0.0000001 -2*maximum(abs,ktdico'*org_dico, dims = 1)))
-        var[1,i+1,4] = maximum(sqrt.(2*ones(1,K) .+ 0.0000001  -2*maximum(abs,rtdico'*org_dico, dims = 1)))
-        var[2,i+1,4] = maximum(sqrt.(2*ones(1,K) .+ 0.0000001 -2*maximum(abs,mtdico'*org_dico, dims = 1)))
-        var[3,i+1,4] = maximum(sqrt.(2*ones(1,K) .+ 0.0000001 -2*maximum(abs,ktdico'*org_dico, dims = 1)))
-        var[1,i+1,2] = sum(maximum(abs,rtdico'*org_dico, dims = 1).>0.95)/K
-        var[2,i+1,2] = sum(maximum(abs,mtdico'*org_dico, dims = 1).>0.95)/K
-        var[3,i+1,2] = sum(maximum(abs,ktdico'*org_dico, dims = 1).>0.95)/K
-        # next!(prog; showvalues = [(:iter,i), (:found,round(var[1,i+1,2]*K))])
         i += 1
     end
-    f = Figure(resolution = (1200, 1200))
+    f = Figure(size = (1200, 1200))
 
     axes = [CairoMakie.Axis(f[i, j], yscale = log,xminorticksvisible = true, xminorgridvisible = true,xminorticks = IntervalsBetween(2)) for i in 1:2, j in 1:2]
 
@@ -334,24 +311,6 @@ function run_tests(;d::Int64 = 128,K::Int64 = 256,S::Int64 = 4, b::Float64 = 0.0
     axes[4].title = "Biggest Distance" 
     axislegend(axes[4],position = :rt)
 
-    # axes[1].xticks = 0:6
-
-    # axes[2].xticks = 0:pi:2pi
-    # axes[2].xtickformat = xs -> ["$(x/pi)π" for x in xs]
-
-    # axes[3].xticks = (0:pi:2pi, ["start", "middle", "end"])
-
-    # axes[4].xticks = 0:pi:2pi
-    # axes[4].xtickformat = "{:.2f}ms"
-    # 
-    #xes[4].xlabel = "Time"
-    display(f)
-    println(var[1,end,2])
-    if var[1,iter+1,2] == 1
-        println("success")
-    else
-        println("try again")
-    end
     return var
 end
 
@@ -374,210 +333,54 @@ function load_mnist(d)
 end
 
 
-function run_tests_brain_data(;d::Int64 = 28^2,K::Int64 = Int(round(28^2)), S::Int64 = Integer(round(28^2*0.05)),iter::Int64 = 1)
-    #### Testfile to reproduce plots in the paper. 
-
-    #### algorithm parameters #################################
-    runs = 1;         # number of trials
-
-    Z = randn(d,K) #
-    normalise!(Z)
-
-    dico_init = Z;
-
-    normalise!(dico_init)
-
-    function load_brain(d)
-        train_path::String=joinpath(pwd(), "images", "Brain4")
-        # load("brain_data.mat")
-        # d = 64
-        list = readdir(train_path)[2:end]
-        Y = zeros(d,length(list))
-        for j in eachindex(list)
-            img = imresize( Gray.(load(joinpath(train_path,list[j]))),(Integer(sqrt(d)),Integer(sqrt(d))))
-            img = convert(Matrix{Float64},img)
-            img = img./norm(img);
-            Y[:,j] = reshape(img,d)
-        end
-        return Y
-    end
+function run_tests_mnist(;d::Int64 =16^2,K::Int64 = Int(round(16^2)), S::Int64 = Integer(round(5)) ,iter::Int64 = 5)
+    pdico = randn(d,K)
+    normalise!(pdico)
    
     ### create signal generating dictionary and generate signals
-    rtdico = copy(dico_init);
-    mtdico = copy(dico_init);
     var = zeros(3,iter+1,4);
 
     prog = Progress(iter, dt=0.5,desc="Learning los dictionarios...",  barglyphs=BarGlyphs("[=> ]"), barlen=50, color=:black);
     i = 1
     
-    
-    Y = load_brain(d)
-    replace!(Y, Inf=>0)
-    replace!(Y, NaN=>0)
-
-
-    d,N = size(Y)
-    ip = zeros(K,N)
-    absip = zeros(K,N)
-    X = zeros(K,N)
-    gram = zeros(K,K)
-    ix = [collect(1:K) for t in 1:Threads.nthreads()]
-    ind= [Vector{Int}(undef,S) for t in 1:Threads.nthreads()]
-    
-    est_weights= [zeros(K) for t in 1:Threads.nthreads()]
-    weights = zeros(K)
-    N_org = N
-    while i <= iter
-        start_idx = Int((i-1) *  round(N_org/iter) + 1)
-        end_idx = Int(min(i * round(N_org/iter), size(Y, 2)))
-        Y_new = Y#Y[:, start_idx:end_idx]
-        d,N = size(Y_new)
-        ip = zeros(K,N)
-        absip = zeros(K,N)
-        X = zeros(K,N)
-        gram = zeros(K,K)
-        ix = [collect(1:K) for t in 1:Threads.nthreads()]
-        ind= [Vector{Int}(undef,S) for t in 1:Threads.nthreads()]
-        
-        est_weights= [zeros(K) for t in 1:Threads.nthreads()]
-        weights = zeros(K)
-        rtdico, x_rtdico = mod_dl(Y_new, S, K, rtdico, d, N, ip, absip, X, gram, ix, ind, est_weights, weights)
-        mtdico, x_mdico = mod_dl_copy(Y_new, S, K, mtdico, d, N, ip, absip, X, gram, ix, ind, est_weights, weights)
-
-        var[1,i+1,1] = norm(Y - rtdico*x_rtdico)
-        var[2,i+1,1] = norm(Y - mtdico*x_mdico)
-        var[1,i+1,2] = 0
-        var[2,i+1,2] = 0
-        var[1,i+1,3] = 0
-        var[2,i+1,3] = 0
-        var[1,i+1,4] = 0
-        var[2,i+1,4] = 0
-        
-        next!(prog; showvalues = [(:iter,i), (:norm,round(var[1,i+1,1]))])
-        i += 1
-    end
-    print(var[1,:,1])
-    print(var[2,:,1])
-    f = Figure(resolution = (1200, 1200))
-
-    var[:,1,1] .= 0
-    var[:,1,3] .= 0
-    var[:,1,4] .= 0
-    var[:,1,2] .= 0
-
-    axes = [CairoMakie.Axis(f[i, j]) for i in 1:2, j in 1:2]
-
-    xs = 1:iter+1;
-    for (i, ax) in enumerate(axes)
-        lines!(ax,xs,var[1,:,i],label = "MOD")
-        lines!(ax,xs,var[2,:,i],label = "MOD mit preconditioning")
-        ax.xlabel = "Iterations"
-    end
-    axes[1].title = "Average Inner Product"
-    axislegend(axes[1],position = :rb)
-    axes[2].title = "Number of Atoms with ip > 0.9"
-    axislegend(axes[2],position = :rb)
-    axes[3].title = "Average Distance"
-    axislegend(axes[3],position = :rt)
-    axes[4].title = "Biggest Distance" 
-    axislegend(axes[4],position = :rt)
-
-    display(f)
-    function plot_dictionary(dico_init, K, name)
-        
-        f = Figure(resolution = (3200, 3200))
-        axes = [CairoMakie.Axis(f[i,j]) for i in 1:Integer(round(sqrt(K)-1)), j in 1:Integer(round(sqrt(K)-1))]
-
-        for (i, ax) in enumerate(axes)
-            atom = reshape(dico_init[:, i], Integer(sqrt(d)), Integer(sqrt(d)))
-            if i == 1
-                heatmap!(ax, atom, colormap = :grays, text = text("Dictionary", color = :black, fontsize = 20, pos = (0.5, 0.5), halign = :center, valign = :center))
-            else
-                heatmap!(ax, atom, colormap = :grays)
-            end
-            
-        end
-        display(f)
-    end
-
-    # Call the function to plot the dictionary
-    plot_dictionary(rtdico, K, "rtdico")
-    plot_dictionary(mtdico, K, "mtdico")
-
-end
-
-
-function run_tests_mnist(;d::Int64 = 8^2,K::Int64 = Int(round(8^2*2)), S::Int64 = Integer(round(8^2*0.05)) ,iter::Int64 = 10)
-    #### Testfile to reproduce plots in the paper. 
-
-    #### algorithm parameters #################################
-    runs = 1;         # number of trials
-
-    Z = randn(d,K) #
-    normalise!(Z)
-
-    dico_init = Z;
-
-    normalise!(dico_init)
-
-   
-    ### create signal generating dictionary and generate signals
-    rtdico = copy(dico_init);
-    mtdico = copy(dico_init);
-    var = zeros(3,iter+1,4);
-
-    prog = Progress(iter, dt=0.5,desc="Learning los dictionarios...",  barglyphs=BarGlyphs("[=> ]"), barlen=50, color=:black);
-    i = 1
-    
-    
+    # Load MNIST dataset
     Y = load_mnist(d)
-
-    ### Allocations for more speed
+    Y = Y *-1
     d,N = size(Y)
-    ip = zeros(K,N)
-    absip = zeros(K,N)
-    X = zeros(K,N)
-    gram = zeros(K,K)
-    ix = [collect(1:K) for t in 1:Threads.nthreads()]
-    ind= [Vector{Int}(undef,S) for t in 1:Threads.nthreads()]
     
-    est_weights= [zeros(K) for t in 1:Threads.nthreads()]
-    weights = zeros(K)
-    N_org = N
+    weights_estimated = zeros(K)
     while i <= iter
-        start_idx = Int((i-1) *  round(N_org/iter) + 1)
-        end_idx = Int(min(i * round(N_org/iter), size(Y, 2)))
-        Y_new = Y[:, start_idx:end_idx]
-        d,N = size(Y_new)
-        ip = zeros(K,N)
-        absip = zeros(K,N)
-        X = zeros(K,N)
-        gram = zeros(K,K)
-        ix = [collect(1:K) for t in 1:Threads.nthreads()]
-        ind= [Vector{Int}(undef,S) for t in 1:Threads.nthreads()]
+        start_idx = Int((i-1) *  round(N/iter) + 1)
+        end_idx = Int(min(i * round(N/iter), size(Y, 2)))
+        Y_curr = Y[:, start_idx:end_idx]
         
-        est_weights= [zeros(K) for t in 1:Threads.nthreads()]
-        weights = zeros(K)
-        rtdico, x_rtdico = mod_dl(Y_new, S, K, rtdico, d, N, ip, absip, X, gram, ix, ind, est_weights, weights)
-        mtdico, x_mdico = mod_dl_copy(Y_new, S, K, mtdico, d, N, ip, absip, X, gram, ix, ind, est_weights, weights)
-        #println(size(Y_new))
-        #println(Y[:,1])
-        #println(norm(x_rtdico))
-        var[1,i+1,1] = norm(Y_new - rtdico*x_rtdico)
-        var[2,i+1,1] = norm(Y_new - mtdico*x_mdico)
-        var[1,i+1,2] = 0
-        var[2,i+1,2] = 0
-        var[1,i+1,3] = 0
-        var[2,i+1,3] = 0
-        var[1,i+1,4] = 0
-        var[2,i+1,4] = 0
+        pdico , weights_estimated = mod_dl(Y_curr,S,pdico)
+        indices = sortperm(weights_estimated, rev=true)
+        pdico = pdico[:,indices]
+        X = thresholding(Y_curr, S, pdico)
         
+        var[1,i+1,1] = norm(Y_curr - pdico*X)
+    
         next!(prog; showvalues = [(:iter,i), (:norm,round(var[1,i+1,1]))])
         i += 1
     end
+    _, weights_estimated = mod_dl(Y,S,pdico)
+    indices = sortperm(weights_estimated, rev=true)
+    pdico = pdico[:,indices]
+
+    weights_sorted = sort(weights_estimated, rev= true)
+    fig = Figure(size = (800, 600))
+    ax = CairoMakie.Axis(fig[1, 1],xminorticksvisible = true, xminorgridvisible = true, xminorticksize = 6,
+        yminorticksize = 6, xlabel = "index", ylabel = L"$\pi$",
+        titlesize = 23, ylabelsize = 21, xlabelsize = 18)
+    t = "inclusion probabilities"
+    CairoMakie.lines!(ax, weights_sorted, color = :black, label = L"%$(t) $\pi$")
+    axislegend(ax)
+    display(fig)
+    save("estimated_weights_mnist.pdf", fig)
     print(var[1,:,1])
     print(var[2,:,1])
-    f = Figure(resolution = (1200, 1200))
+    f = Figure(size = (1200, 1200))
 
     var[:,1,1] .= 0
     var[:,1,3] .= 0
@@ -602,21 +405,46 @@ function run_tests_mnist(;d::Int64 = 8^2,K::Int64 = Int(round(8^2*2)), S::Int64 
     axislegend(axes[4],position = :rt)
 
     display(f)
-    # function plot_dictionary(dico_init, K, name)
         
-    #     f = Figure(resolution = (3200, 3200))
-    #     axes = [CairoMakie.Axis(f[i,j]) for i in 1:Integer(round(sqrt(K)-1)), j in 1:Integer(round(sqrt(K)-1))]
+    function plot_dictionary(dico_init, Y)
+        d = size(dico_init, 1)
+        f = Figure(size = (800, 500))
+        
 
-    #     for (i, ax) in enumerate(axes)
-    #         atom = reshape(dico_init[:, i], Integer(sqrt(d)), Integer(sqrt(d)))
-    #         heatmap!(ax, atom, colormap = :grays)     
-    #     end
-    #     axes[1].title = name
-    #     display(f)
-    # end
-    # #@infiltrate
-    # # Call the function to plot the dictionary
-    # plot_dictionary(rtdico, K, "rtdico")
-    # plot_dictionary(mtdico, K, "mtdico")
+
+        # Original signals
+        for i in 1:6
+            ax = CairoMakie.Axis(f[1, i],yticklabelsvisible=false,xticklabelsvisible=false, xticksvisible=false, yticksvisible=false)
+            atom = reshape(Y[:, i], Integer(sqrt(d)), Integer(sqrt(d)))
+            heatmap!(ax, atom, colormap = :grays, clims = (0, 1))
+            
+            ax = CairoMakie.Axis(f[2, i],yticklabelsvisible=false,xticklabelsvisible=false, xticksvisible=false, yticksvisible=false)
+            atom = reshape(dico_init[:, i], Integer(sqrt(d)), Integer(sqrt(d)))
+            if atom[1,1] < 0
+                atom *= -1
+            end
+            heatmap!(ax, atom, colormap = :grays, clims = (0, 1))
+            
+            ax = CairoMakie.Axis(f[3, i],yticklabelsvisible=false,xticklabelsvisible=false, xticksvisible=false, yticksvisible=false)
+            atom_index = 100 + (i - 1)
+            atom = reshape(dico_init[:, atom_index], Integer(sqrt(d)), Integer(sqrt(d)))
+            if atom[1,1] < 0
+                atom *= -1
+            end
+            heatmap!(ax, atom, colormap = :grays, clims = (0, 1))
+
+            ax = CairoMakie.Axis(f[4, i],yticklabelsvisible=false,xticklabelsvisible=false, xticksvisible=false, yticksvisible=false)
+            atom_index = 200 + (i - 1)
+            atom = reshape(dico_init[:, atom_index], Integer(sqrt(d)), Integer(sqrt(d)))
+            if atom[1,1] < 0
+                atom *= -1
+            end
+            heatmap!(ax, atom, colormap = :grays, clims = (0, 1))
+        end
+
+        display(f)
+        save("mnist_elements.pdf", f)
+    end
+    plot_dictionary(pdico, Y)
 
 end
