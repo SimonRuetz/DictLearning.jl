@@ -16,13 +16,8 @@ using Distributions
 using DelimitedFiles
 
 include("utils.jl")
-include("mod_dl.jl")
-include("mod_dl_copy.jl")
 include("ksvd.jl")
-include("ksvd_copy.jl")
-include("itkrm.jl")
-include("itkrm_copy.jl")
-include("itkrm_metal.jl")
+include("mod.jl")
 include("main.jl")
 include("makesparsesig.jl")
 include("thresholding.jl")
