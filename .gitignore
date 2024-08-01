@@ -1,2 +1,4 @@
 images
 settings.json
+*.csv
+*.pdf
