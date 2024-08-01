@@ -1,4 +1,4 @@
-function ksvd(Y,S,dico, N, ip, absip, X, gram, weights)
+function ksvd(Y,S,dico)
     #### KSVD algorithm
     # one iteration of the mod dictionary learning algorithm with thresholding.
 
@@ -8,6 +8,13 @@ function ksvd(Y,S,dico, N, ip, absip, X, gram, weights)
     # dico ..... initial dictionary
 
     #### 2024 Simon Ruetz
+    N = size(Y,2)
+    K = size(dico,2)
+    ip = zeros(Float64,K,N)
+    absip = zeros(Float64,K,N)
+    X = zeros(Float64,K,N)
+    gram = zeros(Float64,K,K)
+    weights = zeros(Float64,K)
 
     ip .= 0
     absip .= 0

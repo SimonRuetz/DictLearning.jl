@@ -125,25 +125,10 @@ end
 
 function run_tests(;d::Int64 = 128,K::Int64 = 256,S::Int64 = 4, b::Float64 = 0.0,
     rho::Float64 = 0., eps::Float64 = 1.1 ,N::Int64 = 1000,iter::Int64 = 50, alpha::Float64 = 1., beta::Float64 = 0., decaying::Float64 = 0.)
-    #### Testfile to reproduce plots in the paper. 
-
-    # weights = 0.3:10.2/(K-1):10.5; # weights for non-uniform sampling without replacement
-    #p = randperm(K)
     weights = (1:K).^(-0.5)
-    # weights[1:Int(K/2)] .= 10
-    # weights[Int(K/2)+1:end] .= 1
-    # weights .= 1.:9.0/(K-1):10.0;
-    # weights = abs.(randn(K))
     shuffle!(weights)
     weights_sorted = sort(weights, rev = true)
     
-    
-    # save("distribution_of_weights.pdf", fig)
-    #weights .= 1
-    # weights[1:Int(K/4)] .= 3
-    # weights[Int(K/2)+1:Int(K/2)+Int(K/4)] .= 3
-    #weights = reverse(weights, dist = 2)
-    # println(weights)
     w = aweights(weights/sum(weights)*S)
     inclusion_probs = zeros(K)
     l = 0
@@ -152,7 +137,6 @@ function run_tests(;d::Int64 = 128,K::Int64 = 256,S::Int64 = 4, b::Float64 = 0.0
         l = l +1
     end
     weights_sorted = sort(inclusion_probs, rev = true)
-    #plot weights
     fig = Figure(size = (800, 600))
     ax = CairoMakie.Axis(fig[1, 1],xminorticksvisible = true, xminorgridvisible = true, xminorticksize = 6,
         yminorticksize = 6, xlabel = "index", ylabel = L"$\pi$",
@@ -160,13 +144,11 @@ function run_tests(;d::Int64 = 128,K::Int64 = 256,S::Int64 = 4, b::Float64 = 0.0
     t = "inclusion probabilities"
     CairoMakie.lines!(ax, weights_sorted, color = :black, label = L"%$(t) $\pi$")
     axislegend(ax)
-    # display(fig)
-    # save("distribution_of_weights.pdf", fig)
+    display(fig)
+    save("distribution_of_weights.pdf", fig)
 
     ### initialisation of dictionary
-    dico = randn(d,K)   
-
-    # dico = [Matrix(1.0I, d, d) idct(Matrix(1.0I, d, d),1) ]#ifwht(Matrix(1.0I, d, d)) randn(d,d)]
+    dico = randn(d,K)
     normalise!(dico)
 
     diag_sqrt_weights = diagm(sqrt.(inclusion_probs))
@@ -189,12 +171,11 @@ function run_tests(;d::Int64 = 128,K::Int64 = 256,S::Int64 = 4, b::Float64 = 0.0
     dico = dico * (1-alpha) + dico_2 * (alpha)
     normalise!(dico)
     org_dico = copy(dico)
-    # plot abs(org_dico'*org_dico - diagm(ones(K)))
     fig = Figure(size = (1200, 1200))
     ax = CairoMakie.Axis(fig[1, 1])
     heatmap!(ax, abs.(org_dico'*org_dico - diagm(ones(K))), colormap = :grays)
     ax = CairoMakie.Axis(fig[1, 2])
-    # display(fig)
+    display(fig)
 
     Z = randn(d,K) #
     normalise!(Z)
@@ -246,7 +227,6 @@ function run_tests(;d::Int64 = 128,K::Int64 = 256,S::Int64 = 4, b::Float64 = 0.0
 
     function generate!(Y,w,x1toS,rho,N,p,S,dico,d)
         @inbounds Threads.@threads for n = 1:N
-            # sample!(1:K,w, p[Threads.threadid()]; replace=false, ordered=false)
             p[Threads.threadid()]=bernoulli_sample(w, S)
             shuffle!(p[Threads.threadid()])
             x1toS .= x1toS.*rand([-1, 1],(S))
@@ -261,14 +241,13 @@ function run_tests(;d::Int64 = 128,K::Int64 = 256,S::Int64 = 4, b::Float64 = 0.0
     ### create signal generating dictionary and generate signals
     rtdico = copy(dico_init);
 
-    #print(rtdico)
     var = zeros(3,iter+1,5);
     var[:,1,1] .= mean(maximum(abs,dico_init'*org_dico, dims = 1))
     var[:,1,3] .= mean(sqrt.(2*ones(1,K).+ 0.0000001 -2*maximum(abs,dico_init'*org_dico, dims = 1)))
     var[:,1,4] .= maximum(sqrt.(2*ones(1,K).+ 0.0000001 -2*maximum(abs,dico_init'*org_dico, dims = 1)))
     var[:,1,2] .= sum(maximum(abs,dico_init'*org_dico, dims = 1).>0.9)/K
     var[:,1,5] .= opnorm((rtdico -org_dico)*diagm(sqrt.(inclusion_probs)))
-    #println(var[1,1,4])
+
     i = 0
     while i < iter
         if decaying == 1
@@ -294,8 +273,6 @@ function run_tests(;d::Int64 = 128,K::Int64 = 256,S::Int64 = 4, b::Float64 = 0.0
     for (i, ax) in enumerate(axes)
         lines!(ax,xs,var[1,:,i].+ 0.00000001,label = "MOD")
         lines!(ax,xs,var[2,:,i].+ 0.00000001,label = "MOD mit preconditioning")
-        #lines!(ax,xs,var[3,:,i],label = "K-SVD")
-        #axislegend(ax, position = :rb)
         ax.xlabel = "Iterations"
     end
 
@@ -406,8 +383,6 @@ function run_tests_mnist(;d::Int64 =16^2,K::Int64 = Int(round(16^2)), S::Int64 =
     function plot_dictionary(dico_init, Y)
         d = size(dico_init, 1)
         f = Figure(size = (800, 500))
-        
-
 
         # Original signals
         for i in 1:6

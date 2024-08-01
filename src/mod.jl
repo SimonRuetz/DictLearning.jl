@@ -1,6 +1,3 @@
-
-
-
 function mod_dl(Y,S,dico)
     #### MOD algorithm
     # one iteration of the mod dictionary learning algorithm with thresholding.
