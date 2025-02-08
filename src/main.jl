@@ -20,7 +20,7 @@ function create_convergence_plot()
     S = 4
     b = 0.0
     rho = 0.0
-    eps = 0.8
+    eps = 0.7
     runs = 100
     iter = 8
     alpha = 1.0
@@ -28,7 +28,7 @@ function create_convergence_plot()
     recovered = zeros(6, iter+1, 5)
     j = 1
     dec = 0
-    for N in [1250, 10000, 40000,160000]
+    for N in [1250, 10000, 40000, 160000]
         for run in 1:runs
             print(N, run)
             if dec == 0
@@ -47,7 +47,7 @@ function create_convergence_plot()
         yminorticksize = 6, xlabel = "iteration", ylabel = L"$\delta(\Phi, \Psi)$",
         titlesize = 23, ylabelsize = 21, xlabelsize = 18)
     j = 1
-    for N in [1250, 10000, 40000,160000]
+    for N in  [1250, 10000, 40000, 160000]
         if N == 1250
             scatterlines!(ax, 0:iter, max(recovered[j,:, 5],recovered[j,:, 4]), linewidth = 4, marker = :xcross, markersize = 13, label = "N adapted", linestyle = :dashdot, color = :red)
         elseif N == 10000
@@ -59,12 +59,16 @@ function create_convergence_plot()
         end
         j = j+1
     end
-    lines!(ax, 0:iter, eps.*((3/4).^(0:iter)), linewidth = 2, markersize = 6, marker = :circle, label = "Reference line", linestyle = :dash, color = :black)
+    lines!(ax, collect(0:iter), eps .* ((1/2) .^ collect(0:iter)),
+       linewidth = 2, linestyle = :dash, color = :black, label = "Reference line")
+
+    scatter!(ax, collect(0:iter), eps .* ((1/2) .^ collect(0:iter)),
+         markersize = 6, color = :black)
     axislegend(ax)
     display(fig)
-    save("convergence_plot_03072024.pdf", fig)
+    save("convergence_plot_05022025.pdf", fig)
 
-    writedlm( "convergence_plot_new_expo_03072024.csv",  recovered, ',')
+    writedlm( "convergence_plot_new_expo_05022025.csv",  recovered, ',')
 end
 
 
@@ -137,15 +141,15 @@ function run_tests(;d::Int64 = 128,K::Int64 = 256,S::Int64 = 4, b::Float64 = 0.0
         l = l +1
     end
     weights_sorted = sort(inclusion_probs, rev = true)
-    fig = Figure(size = (800, 600))
-    ax = CairoMakie.Axis(fig[1, 1],xminorticksvisible = true, xminorgridvisible = true, xminorticksize = 6,
-        yminorticksize = 6, xlabel = "index", ylabel = L"$\pi$",
-        titlesize = 23, ylabelsize = 21, xlabelsize = 18)
-    t = "inclusion probabilities"
-    CairoMakie.lines!(ax, weights_sorted, color = :black, label = L"%$(t) $\pi$")
-    axislegend(ax)
-    display(fig)
-    save("distribution_of_weights.pdf", fig)
+    # fig = Figure(size = (800, 600))
+    # ax = CairoMakie.Axis(fig[1, 1],xminorticksvisible = true, xminorgridvisible = true, xminorticksize = 6,
+        # yminorticksize = 6, xlabel = "index", ylabel = L"$\pi$",
+        # titlesize = 23, ylabelsize = 21, xlabelsize = 18)
+    # t = "inclusion probabilities"
+    # CairoMakie.lines!(ax, weights_sorted, color = :black, label = L"%$(t) $\pi$")
+    # axislegend(ax)
+    # display(fig)
+    # save("distribution_of_weights.pdf", fig)
 
     ### initialisation of dictionary
     dico = randn(d,K)
@@ -171,11 +175,11 @@ function run_tests(;d::Int64 = 128,K::Int64 = 256,S::Int64 = 4, b::Float64 = 0.0
     dico = dico * (1-alpha) + dico_2 * (alpha)
     normalise!(dico)
     org_dico = copy(dico)
-    fig = Figure(size = (1200, 1200))
-    ax = CairoMakie.Axis(fig[1, 1])
-    heatmap!(ax, abs.(org_dico'*org_dico - diagm(ones(K))), colormap = :grays)
-    ax = CairoMakie.Axis(fig[1, 2])
-    display(fig)
+    # fig = Figure(size = (1200, 1200))
+    # ax = CairoMakie.Axis(fig[1, 1])
+    # heatmap!(ax, abs.(org_dico'*org_dico - diagm(ones(K))), colormap = :grays)
+    # ax = CairoMakie.Axis(fig[1, 2])
+    # display(fig)
 
     Z = randn(d,K) #
     normalise!(Z)
