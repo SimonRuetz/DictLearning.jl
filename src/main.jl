@@ -20,54 +20,47 @@ function create_convergence_plot()
     S = 4
     b = 0.0
     rho = 0.0
-    eps = 0.7
+    eps = 0.9
     runs = 100
-    iter = 8
     alpha = 1.0
     beta = 0.0
-    recovered = zeros(6, iter+1, 5)
-    j = 1
-    dec = 0
-    for N in [1250, 10000, 40000, 160000]
-        for run in 1:runs
-            print(N, run)
-            if dec == 0
-                decaying = 1.
-            else 
-                decaying = 0.
-            end
-            
-            recovered[j, :,:] += run_tests(d=d,K=K,S=S,b=b,rho=rho,eps=eps,N=N,iter=iter,alpha=alpha,beta=beta,decaying=decaying)[1,:,:]/runs
-        end
-        dec = dec + 1
-        j = j+1
+    iter_max = 8
+    recovered = zeros(6, iter_max+1, 5)
+    for i in 1:runs
+        recovered[1, :,:] += run_tests(d=d,K=K,S=S,b=b,rho=rho,eps=eps,N=2500,iter=iter_max,alpha=alpha,beta=beta,decay_factor=2.)[1,:,:]/runs
+        recovered[2, 1:6,:] += run_tests(d=d,K=K,S=S,b=b,rho=rho,eps=eps,N=2500,iter=5,alpha=alpha,beta=beta,decay_factor=4.)[1,:,:]/runs
+        recovered[3, :,:] += run_tests(d=d,K=K,S=S,b=b,rho=rho,eps=eps,N=10000,iter=iter_max,alpha=alpha,beta=beta,decay_factor=1.)[1,:,:]/runs
+        recovered[4, :,:] += run_tests(d=d,K=K,S=S,b=b,rho=rho,eps=eps,N=40000,iter=iter_max,alpha=alpha,beta=beta,decay_factor=1.)[1,:,:]/runs
+        recovered[5, :,:] += run_tests(d=d,K=K,S=S,b=b,rho=rho,eps=eps,N=160000,iter=iter_max,alpha=alpha,beta=beta,decay_factor=1.)[1,:,:]/runs
+        println(i)
     end
     fig = Figure(size = (800, 600))
     ax = CairoMakie.Axis(fig[1, 1], yscale = log10, xminorticksvisible = true, xminorgridvisible = true, xminorticksize = 6,
         yminorticksize = 6, xlabel = "iteration", ylabel = L"$\delta(\Phi, \Psi)$",
         titlesize = 23, ylabelsize = 21, xlabelsize = 18)
     j = 1
-    for N in  [1250, 10000, 40000, 160000]
+    for N in [1250, 2500, 10000, 40000, 160000]
         if N == 1250
-            scatterlines!(ax, 0:iter, max(recovered[j,:, 5],recovered[j,:, 4]), linewidth = 4, marker = :xcross, markersize = 13, label = "N adapted", linestyle = :dashdot, color = :red)
+             scatterlines!(ax, 0:iter_max, max(recovered[j,:, 5],recovered[j,:, 4]), linewidth = 4, marker = :xcross, markersize = 13, label = "N adapted, scaling factor 2", linestyle = :dashdot, colormap = :broc)
+        elseif N == 2500
+            scatterlines!(ax, 0:5, max(recovered[j,1:6, 5],recovered[j,1:6, 4]), linewidth = 4, marker = :star5, markersize = 13, label = "N adapted, scaling factor 4", linestyle = :dashdot, colormap = :broc)
         elseif N == 10000
-            scatterlines!(ax, 0:iter, max(recovered[j,:, 5],recovered[j,:, 4]), linewidth = 2,  marker = :circle, markersize = 13, label = "N = $N", colormap = :broc)
+            scatterlines!(ax, 0:iter_max, max(recovered[j,:, 5],recovered[j,:, 4]), linewidth = 2,  marker = :circle, markersize = 13, label = "N = $N", colormap = :broc)
         elseif N == 40000
-            scatterlines!(ax, 0:iter, max(recovered[j,:, 5],recovered[j,:, 4]), linewidth = 2, marker = :utriangle, markersize = 13, label = "N = $N", colormap = :broc)
+            scatterlines!(ax, 0:iter_max, max(recovered[j,:, 5],recovered[j,:, 4]), linewidth = 2, marker = :utriangle, markersize = 13, label = "N = $N", colormap = :broc)
         elseif N == 160000
-            scatterlines!(ax, 0:iter, max(recovered[j,:, 5],recovered[j,:, 4]), linewidth = 2, marker = :diamond, markersize = 13, label = "N = $N", colormap = :broc)
+            scatterlines!(ax, 0:iter_max, max(recovered[j,:, 5],recovered[j,:, 4]), linewidth = 2, marker = :diamond, markersize = 13, label = "N = $N", colormap = :broc)
         end
         j = j+1
     end
-    lines!(ax, collect(0:iter), eps .* ((1/2) .^ collect(0:iter)),
+    lines!(ax, collect(0:iter_max), eps .* ((1/2) .^ collect(0:iter_max)),
        linewidth = 2, linestyle = :dash, color = :black, label = "Reference line")
 
-    scatter!(ax, collect(0:iter), eps .* ((1/2) .^ collect(0:iter)),
+    scatter!(ax, collect(0:iter_max), eps .* ((1/2) .^ collect(0:iter_max)),
          markersize = 6, color = :black)
     axislegend(ax)
     display(fig)
     save("convergence_plot_05022025.pdf", fig)
-
     writedlm( "convergence_plot_new_expo_05022025.csv",  recovered, ',')
 end
 
@@ -128,7 +121,7 @@ end
 
 
 function run_tests(;d::Int64 = 128,K::Int64 = 256,S::Int64 = 4, b::Float64 = 0.0,
-    rho::Float64 = 0., eps::Float64 = 1.1 ,N::Int64 = 1000,iter::Int64 = 50, alpha::Float64 = 1., beta::Float64 = 0., decaying::Float64 = 0.)
+    rho::Float64 = 0., eps::Float64 = 1.1 ,N::Int64 = 1000,iter::Int64 = 50, alpha::Float64 = 1., beta::Float64 = 0., decay_factor::Float64 = 0.)
     weights = (1:K).^(-0.5)
     shuffle!(weights)
     weights_sorted = sort(weights, rev = true)
@@ -254,11 +247,8 @@ function run_tests(;d::Int64 = 128,K::Int64 = 256,S::Int64 = 4, b::Float64 = 0.0
 
     i = 0
     while i < iter
-        if decaying == 1
-            Y_new = generate!(zeros(d,Int(round(N*(2)^(i)))),w,x1toS,rho,Int(round(N*(2)^(i))),p,S,dico,d)
-        else
-            Y_new = generate!(zeros(d,N),w,x1toS,rho,Int(N),p,S,dico,d)
-        end
+        Y_new = generate!(zeros(d,Int(round(N*(decay_factor)^(i)))),w,x1toS,rho,Int(round(N*(decay_factor)^(i))),p,S,dico,d)
+
         rtdico, _ = mod_dl(Y_new, S,rtdico)
 
         var[1,i+2,1] = mean(maximum(abs,rtdico'*org_dico, dims = 1))
