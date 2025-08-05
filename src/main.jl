@@ -26,18 +26,22 @@ function create_convergence_plot()
     beta = 0.0
     iter_max = 8
     recovered = zeros(6, iter_max+1, 5)
-    for i in 1:runs
-        recovered[1, :,:] += run_tests(d=d,K=K,S=S,b=b,rho=rho,eps=eps,N=2500,iter=iter_max,alpha=alpha,beta=beta,decay_factor=2.)[1,:,:]/runs
-        recovered[2, 1:6,:] += run_tests(d=d,K=K,S=S,b=b,rho=rho,eps=eps,N=2500,iter=5,alpha=alpha,beta=beta,decay_factor=4.)[1,:,:]/runs
-        recovered[3, :,:] += run_tests(d=d,K=K,S=S,b=b,rho=rho,eps=eps,N=10000,iter=iter_max,alpha=alpha,beta=beta,decay_factor=1.)[1,:,:]/runs
-        recovered[4, :,:] += run_tests(d=d,K=K,S=S,b=b,rho=rho,eps=eps,N=40000,iter=iter_max,alpha=alpha,beta=beta,decay_factor=1.)[1,:,:]/runs
-        recovered[5, :,:] += run_tests(d=d,K=K,S=S,b=b,rho=rho,eps=eps,N=160000,iter=iter_max,alpha=alpha,beta=beta,decay_factor=1.)[1,:,:]/runs
-        println(i)
-    end
+    # for i in 1:runs
+    #     recovered[1, :,:] += run_tests(d=d,K=K,S=S,b=b,rho=rho,eps=eps,N=2500,iter=iter_max,alpha=alpha,beta=beta,decay_factor=2.)[1,:,:]/runs
+    #     recovered[2, 1:6,:] += run_tests(d=d,K=K,S=S,b=b,rho=rho,eps=eps,N=2500,iter=5,alpha=alpha,beta=beta,decay_factor=4.)[1,:,:]/runs
+    #     recovered[3, :,:] += run_tests(d=d,K=K,S=S,b=b,rho=rho,eps=eps,N=10000,iter=iter_max,alpha=alpha,beta=beta,decay_factor=1.)[1,:,:]/runs
+    #     recovered[4, :,:] += run_tests(d=d,K=K,S=S,b=b,rho=rho,eps=eps,N=40000,iter=iter_max,alpha=alpha,beta=beta,decay_factor=1.)[1,:,:]/runs
+    #     recovered[5, :,:] += run_tests(d=d,K=K,S=S,b=b,rho=rho,eps=eps,N=160000,iter=iter_max,alpha=alpha,beta=beta,decay_factor=1.)[1,:,:]/runs
+    #     println(i)
+    # end
+
+    data = readdlm("convergence_plot_new_expo_05022025.csv", ',')
+
+    recovered = reshape(data, 6, iter_max + 1, 5)
     fig = Figure(size = (800, 600))
-    ax = CairoMakie.Axis(fig[1, 1], yscale = log10, xminorticksvisible = true, xminorgridvisible = true, xminorticksize = 6,
+    ax = CairoMakie.Axis(fig[1, 1], yscale = log10, xminorticksvisible = true, xminorgridvisible = true, xminorticksize = 6,xticklabelsize = 20, yticklabelsize = 20,
         yminorticksize = 6, xlabel = "iteration", ylabel = L"$\delta(\Phi, \Psi)$",
-        titlesize = 23, ylabelsize = 21, xlabelsize = 18)
+        ylabelsize = 35, xlabelsize = 25)
     j = 1
     for N in [1250, 2500, 10000, 40000, 160000]
         if N == 1250
@@ -58,7 +62,7 @@ function create_convergence_plot()
 
     scatter!(ax, collect(0:iter_max), eps .* ((1/2) .^ collect(0:iter_max)),
          markersize = 6, color = :black)
-    axislegend(ax)
+    axislegend(ax; labelsize=20)
     display(fig)
     save("convergence_plot_05022025.pdf", fig)
     writedlm( "convergence_plot_new_expo_05022025.csv",  recovered, ',')
@@ -135,12 +139,12 @@ function run_tests(;d::Int64 = 128,K::Int64 = 256,S::Int64 = 4, b::Float64 = 0.0
     end
     weights_sorted = sort(inclusion_probs, rev = true)
     # fig = Figure(size = (800, 600))
-    # ax = CairoMakie.Axis(fig[1, 1],xminorticksvisible = true, xminorgridvisible = true, xminorticksize = 6,
-        # yminorticksize = 6, xlabel = "index", ylabel = L"$\pi$",
-        # titlesize = 23, ylabelsize = 21, xlabelsize = 18)
+    # ax = CairoMakie.Axis(fig[1, 1],xminorticksvisible = true, xminorgridvisible = true, xminorticksize = 6,xticklabelsize = 20, yticklabelsize = 20,
+    #     yminorticksize = 6, xlabel = "index", ylabel = L"$\pi$",
+    #     ylabelsize = 35, xlabelsize = 25)
     # t = "inclusion probabilities"
     # CairoMakie.lines!(ax, weights_sorted, color = :black, label = L"%$(t) $\pi$")
-    # axislegend(ax)
+    # axislegend(ax; labelsize=30)
     # display(fig)
     # save("distribution_of_weights.pdf", fig)
 
@@ -338,12 +342,12 @@ function run_tests_mnist(;d::Int64 =16^2,K::Int64 = Int(round(16^2)), S::Int64 =
 
     weights_sorted = sort(weights_estimated, rev= true)
     fig = Figure(size = (800, 600))
-    ax = CairoMakie.Axis(fig[1, 1],xminorticksvisible = true, xminorgridvisible = true, xminorticksize = 6,
-        yminorticksize = 6, xlabel = "index", ylabel = L"$\pi$",
-        titlesize = 23, ylabelsize = 21, xlabelsize = 18)
+    ax = CairoMakie.Axis(fig[1, 1],xminorticksvisible = true, xminorgridvisible = true, xminorticksize = 6,xticklabelsize = 20, yticklabelsize = 20,
+        yminorticksize = 60, xlabel = "index", ylabel = L"$\pi$",
+        ylabelsize = 35, xlabelsize = 25)
     t = "inclusion probabilities"
-    CairoMakie.lines!(ax, weights_sorted, color = :black, label = L"%$(t) $\pi$")
-    axislegend(ax)
+    CairoMakie.lines!(ax, weights_sorted, color = :black, label = L"%$(t) $\pi$", )
+    axislegend(ax; labelsize=30)
     display(fig)
     save("estimated_weights_mnist.pdf", fig)
     print(var[1,:,1])
@@ -381,31 +385,35 @@ function run_tests_mnist(;d::Int64 =16^2,K::Int64 = Int(round(16^2)), S::Int64 =
         # Original signals
         for i in 1:6
             ax = CairoMakie.Axis(f[1, i],yticklabelsvisible=false,xticklabelsvisible=false, xticksvisible=false, yticksvisible=false)
+            ax.yreversed = true
             atom = reshape(Y[:, i], Integer(sqrt(d)), Integer(sqrt(d)))
-            heatmap!(ax, atom, colormap = :grays, clims = (0, 1))
+            heatmap!(ax, atom, colormap = :grays)#, colorrange = (0, 1))
             
             ax = CairoMakie.Axis(f[2, i],yticklabelsvisible=false,xticklabelsvisible=false, xticksvisible=false, yticksvisible=false)
+            ax.yreversed = true
             atom = reshape(dico_init[:, i], Integer(sqrt(d)), Integer(sqrt(d)))
             if atom[1,1] < 0
                 atom *= -1
             end
-            heatmap!(ax, atom, colormap = :grays, clims = (0, 1))
+            heatmap!(ax, atom, colormap = :grays)#, colorrange = (0, 1))
             
             ax = CairoMakie.Axis(f[3, i],yticklabelsvisible=false,xticklabelsvisible=false, xticksvisible=false, yticksvisible=false)
+            ax.yreversed = true
             atom_index = 100 + (i - 1)
             atom = reshape(dico_init[:, atom_index], Integer(sqrt(d)), Integer(sqrt(d)))
             if atom[1,1] < 0
                 atom *= -1
             end
-            heatmap!(ax, atom, colormap = :grays, clims = (0, 1))
+            heatmap!(ax, atom, colormap = :grays)#, colorrange = (0, 1))
 
             ax = CairoMakie.Axis(f[4, i],yticklabelsvisible=false,xticklabelsvisible=false, xticksvisible=false, yticksvisible=false)
+            ax.yreversed = true
             atom_index = 200 + (i - 1)
             atom = reshape(dico_init[:, atom_index], Integer(sqrt(d)), Integer(sqrt(d)))
             if atom[1,1] < 0
                 atom *= -1
             end
-            heatmap!(ax, atom, colormap = :grays, clims = (0, 1))
+            heatmap!(ax, atom, colormap = :grays)#, colorrange = (0, 1))
         end
 
         display(f)
